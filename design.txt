@@ -32,25 +32,86 @@ sys_open:
 	filepath from userlevel to kernel level
 	kmalloc buf
 	vfs_open(buf,flags, mode)
-	failure handle
+	error handle
 	free buf in every cases
 
 3. safety check:
 	fdtable lock
-	boundary check
+	input boundary check
 	mem free
 
 /*---------------------------------------------------------*/
 sys_read:
+1. input check:
+	fd boundary check
+	fd emptiness check 
 
+2. VOP_READ:
+	init struct iovec, ->ubase = buf
+	init struct uio, ->uio_iov = &iov
+	VOP_READ()
+	error handle
+	offset reset
 
-
-
+3. safety check:
+	fdtable lock
+	input boundary check
+	mem free
 
 
 /*---------------------------------------------------------*/
 sys_write:
+1. input check: 
+	fd boundary check
+	fd emptiness check 
+
+2. VOP_WRITE:
+	init struct iovec, ->ubase = buf
+	init struct uio, ->uio_iov = &iov
+	VOP_WRITE()
+	error handle
+	offset reset
+
+3. safety check:
+	fdtable lock
+	input boundary check
+	mem free
+
+
+/*---------------------------------------------------------*/
+sys_close:
+1. input check: 
+	fd boundary check
+	fd emptiness check 
+
+2. VOP_CLOSE:
+	lock_destroy fd lock
+	free fdtable
+	fdtable refcount --
+
+/*---------------------------------------------------------*/
+sys_dup2:
+1. input check: 
+	fd boundary check
+	fd emptiness check
+	fdold != fdnew check
+	
+2. file descriptor copy
+	all param old copy to new
+	strcpy name
+
+3. safety check:
+	fdtable lock
+	input boundary check
+	mem free
+
+/*---------------------------------------------------------*/
+sys_lseek:
 
 
 
+
+
+
+/******************** runprogram.c *************************/
 
