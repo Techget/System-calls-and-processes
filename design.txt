@@ -14,9 +14,15 @@ file descriptor structure:
 
 
 /*********************** file.c ****************************/
+
+/*---------------------------------------------------------*/
+fdtable_init:
+	initialize fdtable with 0,1,2
+
+
+
+/*---------------------------------------------------------*/
 sys_open:
-
-
 1. file descriptor table:
 	fd start at 3
 	check if fd taken, then ++
@@ -29,8 +35,12 @@ sys_open:
 	failure handle
 	free buf in every cases
 
+3. safety check:
+	fdtable lock
+	boundary check
+	mem free
 
-
+/*---------------------------------------------------------*/
 sys_read:
 
 
@@ -38,7 +48,7 @@ sys_read:
 
 
 
-
+/*---------------------------------------------------------*/
 sys_write:
 
 
