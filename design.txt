@@ -1,14 +1,23 @@
 Place your design document here.
 
+/*********************** file.h *****************************/
 
 
-/****************************************************/
+file descriptor structure
+
+
+
+
+
+/*********************** file.c ****************************/
 sys_open:
 
 
 1. file descriptor table:
 	fd start at 3
-	
+	check if taken ++
+	check MAX
+
 
 
 
