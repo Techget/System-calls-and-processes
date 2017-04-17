@@ -3,7 +3,11 @@ Place your design document here.
 /*********************** file.h *****************************/
 
 
-file descriptor structure
+file descriptor structure:
+	filename
+	vnode
+	offset
+	
 
 
 
@@ -15,8 +19,27 @@ sys_open:
 
 1. file descriptor table:
 	fd start at 3
-	check if taken ++
+	check if fd taken, then ++
 	check MAX
+
+2. vfs_open:
+	filepath from userlevel to kernel level
+	kmalloc buf
+	vfs_open(buf,flags, mode)
+	failure handle
+	free buf in every cases
+
+
+
+sys_read:
+
+
+
+
+
+
+
+sys_write:
 
 
 
