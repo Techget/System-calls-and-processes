@@ -108,7 +108,37 @@ syscall(struct trapframe *tf)
 		err = sys___time((userptr_t)tf->tf_a0,
 				 (userptr_t)tf->tf_a1);
 		break;
+		//--------------------------------
 
+		case SYS_open:
+		err = 0;
+		kprintf("open - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
+
+		case SYS_dup2:
+		err = 0;
+		kprintf("dup2 - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
+
+		case SYS_close:
+		err = 0;
+		kprintf("close - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
+
+		case SYS_read:
+		err = 0;
+		kprintf("read - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
+
+		case SYS_write:
+		err = 0;
+		kprintf("write - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
+
+		case SYS_lseek:
+		err = 0;
+		kprintf("lseek - a0: %d a1:%d a2:%d a3:%d \n",tf->tf_a0,tf->tf_a1 ,tf->tf_a2 ,tf->tf_a3 );
+		break;
 	    /* Add stuff here */
 
 	    default:
