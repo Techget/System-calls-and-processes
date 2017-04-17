@@ -55,7 +55,7 @@ sys_read(int fd, void *buf, size_t count){
 
 int 
 sys_write(int fd, const void *buf, size_t count){
-	kprintf("read(%d, -, %d)\n", fd, count);
+	kprintf("write(%d, -, %d)\n", fd, count);
 	void *kbuf;
 	kbuf = kmalloc(sizeof(*buf)*count);
 
@@ -67,7 +67,7 @@ sys_write(int fd, const void *buf, size_t count){
 
 off_t 
 sys_lseek(int fd, off_t offset, int whence){
-	kprintf("read(%d, - , %d)\n", fd, whence);
+	kprintf("lseek(%d, - , %d)\n", fd, whence);
 	void *kbuf;
 	kbuf = kmalloc(sizeof(offset));
 
