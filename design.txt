@@ -1,5 +1,11 @@
 Place your design document here.
 
+
+/********************** syscall.c ***************************/
+switch
+	6 cases
+	call functions in file.c 
+
 /*********************** file.h *****************************/
 
 
