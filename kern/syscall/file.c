@@ -43,13 +43,12 @@ sys_close(int fd, int *retval){
 
 int 
 sys_read(int fd, void *buf, size_t count, int *retval){
-	kprintf("read(%d, -, %d)\n", fd, count);
-	*retval = 0;
-	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf));
+	int result=0;
 
-	kfree(kbuf);
-	return 0;
+	
+
+
+	return result;
 }
 
 int 
