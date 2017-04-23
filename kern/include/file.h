@@ -10,10 +10,10 @@
  */
 #include <limits.h>
 
-#define OPF_TABLE_SIZE 128;
+#define OPF_TABLE_SIZE 128
 
 struct fd {
-    struct opf * open_file; // the index of opfile_table
+    struct opf * open_file; 
     off_t offset;
 };
 
@@ -27,9 +27,11 @@ struct opf{
 };
 
 extern struct opf * open_file_table[OPF_TABLE_SIZE];
+
 /*
  * Put your function declarations and data types here ...
  */
+
 
 int sys_open(const char *filename, int flags, mode_t mode, int *retval);
 int sys_dup2(int oldfd, int newfd, int *retval);
