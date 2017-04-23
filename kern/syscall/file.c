@@ -36,8 +36,49 @@ sys_dup2(int oldfd, int newfd, int *retval){
 
 int 
 sys_close(int fd, int *retval){
-	kprintf("close(%d )\n", fd);
+	//kprintf("close(%d )\n", fd);
+	//*retval = 0;
+
+	//bad file descriptor
+	if(fd >= OPEN_MAX || fd < 0) {
+		return EBADF;
+	}
+	//check file descriptor
+	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		return EBADF;
+	}
+	//check open file
+	if(curproc->p_fdtable->fdt[fd]->open_file == NULL) {
+		return EBADF;
+	}
+
+	//check vnode
+	if(curproc->p_fdtable->fdt[fd]->open_file->vn == NULL) {
+		return EBADF;
+	}
+
+	//close vnode
+	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
+		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
+	} else {
+		curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount -= 1;
+	}
+
+	// close open file
+	if(curproc->p_fdtable->fdt[fd]->open_file->refcount == 1){
+		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
+		kfree(curproc->p_fdtable->fdt[fd]->open_file);
+	}
+ 	else {
+		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
+	}
+
+	// free file descriptor structure
+	kfree(curproc->p_fdtable->fdt[fd]);
+	curproc->p_fdtable->fdt[fd] = NULL;
+
 	*retval = 0;
+
 	return 0;
 }
 
