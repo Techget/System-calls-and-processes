@@ -53,7 +53,7 @@
 #include <file.h>
 #include <limits.h>
 
-struct opf * open_file_table[OPEN_MAX];
+struct opf * open_file_table[OPF_TABLE_SIZE];
 
 /*
  * These two pieces of data are maintained by the makefiles and build system.

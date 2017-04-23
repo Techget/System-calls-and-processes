@@ -14,12 +14,12 @@
 #include <file.h>
 #include <syscall.h>
 #include <copyinout.h>
+#include <proc.h>
 
 
 /*
  * Add your file-related functions here ...
  */
-
 
 int 
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
@@ -85,7 +85,7 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 void opf_table_init(){
 	// set all the field of open_file_table to null in the beginning
 	int i = 0;
-	for(i = 0; i<OPEN_MAX; i++){
+	for(i = 0; i<OPF_TABLE_SIZE; i++){
 		open_file_table[i] = NULL;
 	}
 
@@ -148,5 +148,5 @@ void opf_table_init(){
 }
 
 void fd_table_init(){
-
+	curproc->p_numthreads = 1;
 }

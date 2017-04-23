@@ -10,6 +10,8 @@
  */
 #include <limits.h>
 
+#define OPF_TABLE_SIZE 128;
+
 struct fd {
     struct opf * open_file; // the index of opfile_table
     off_t offset;
@@ -24,7 +26,7 @@ struct opf{
     int refcount;
 };
 
-extern struct opf * open_file_table[OPEN_MAX];
+extern struct opf * open_file_table[OPF_TABLE_SIZE];
 /*
  * Put your function declarations and data types here ...
  */
