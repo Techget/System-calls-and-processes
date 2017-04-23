@@ -24,25 +24,6 @@ int
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	kprintf("open(%s, %d, %d)\n", filename, flags, mode);
 	*retval = 0;
-/*
-	int result = 0;
-	int index = 3;
-
-	if(!(flags==O_RDONLY || flags==O_WRONLY || flags==O_RDWR || flags==(O_RDWR|O_CREAT|O_TRUNC))) {
-		return EINVAL;
-	}
-
-
-	char *kbuf;
-	kbuf = (char *)kmalloc(sizeof(char)*PATH_MAX);
-
-	result = copyinstr((const_userptr_t)filename,kbuf, PATH_MAX, &len);
-	if(result) {
-		kfree(kbuf);
-		return result;
-	}
-*/
-
 	return 0;
 }
 
@@ -83,7 +64,6 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 }
 
-
 off_t 
 sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	kprintf("lseek(%d, - , %d)\n", fd, whence);
@@ -110,14 +90,17 @@ void fd_table_init(void){
 	curproc->p_fdtable->fdt[0] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[0]->open_file = open_file_table[0];
 	curproc->p_fdtable->fdt[0]->offset = 0;
+	curproc->p_fdtable->fdt[0]->flags = O_RDONLY;
 	// stdout
 	curproc->p_fdtable->fdt[1] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[1]->open_file = open_file_table[1];
 	curproc->p_fdtable->fdt[1]->offset = 0;
+	curproc->p_fdtable->fdt[1]->flags = O_WRONLY;
 	// stderr
 	curproc->p_fdtable->fdt[2] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[2]->open_file = open_file_table[2];
 	curproc->p_fdtable->fdt[2]->offset = 0;
+	curproc->p_fdtable->fdt[2]->flags = O_WRONLY;
 }
 
 void opf_table_init(){

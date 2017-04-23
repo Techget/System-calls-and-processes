@@ -14,6 +14,7 @@
 
 struct fd {
     struct opf * open_file; 
+    int flags;
     off_t offset;
 };
 
