@@ -13,21 +13,21 @@
 struct fd {
     struct opf * open_file; // the index of opfile_table
     off_t offset;
-}
+};
 
 struct fd_table {
-	struct fd * fdt[MAX_FILES];
-}
+	struct fd * fdt[OPEN_MAX];
+};
 
-enum opf_status{ READ, WRITE}
+enum opf_status{ READ, WRITE};
 
 struct opf{
     enum opf_status *rw;
     struct vnode *vn;
     int refcount;
-}
+};
 
-extern struct opf * open_file_table[MAX_FILES];
+extern struct opf * open_file_table[OPEN_MAX];
 /*
  * Put your function declarations and data types here ...
  */
@@ -39,7 +39,7 @@ int sys_read(int fd, void *buf, size_t count, int *retval);
 int sys_write(int fd, const void *buf, size_t count, int *retval);
 off_t sys_lseek(int fd, off_t offset, int whence, int *retval,int *retval1);
 
-void opf_table_init();
-void fd_table_init();
+void opf_table_init(void);
+void fd_table_init(void);
 
 #endif /* _FILE_H_ */
