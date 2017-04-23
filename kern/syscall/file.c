@@ -36,9 +36,6 @@ sys_dup2(int oldfd, int newfd, int *retval){
 
 int 
 sys_close(int fd, int *retval){
-	//kprintf("close(%d )\n", fd);
-	//*retval = 0;
-
 	//bad file descriptor
 	if(fd >= OPEN_MAX || fd < 0) {
 		return EBADF;
