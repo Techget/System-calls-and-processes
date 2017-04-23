@@ -44,7 +44,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		kfree(kbuf);
 		return result;
 	}
-
+	// check file descriptor table
 	while(curproc->p_fdtable->fdt[index]!=NULL){
 		index++;
 	}
@@ -54,7 +54,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		return ENFILE;
 	}
 
-	// link to open file table
+	// check open file table
 	while(open_file_table[i]!=NULL){
 		i++;
 	}
@@ -77,7 +77,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		i++;
 	}
 
-	// create new open file 
+	// create new open file table
 	if(open_file_table[i]==NULL){
 		ofile = (struct opf *)kmalloc(sizeof(struct opf));
 		ofile->vn = vn;
@@ -86,7 +86,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		open_file_table[i] = ofile;
 	}
-
+	// link with existing open file table
 	if(open_file_table[i]->vn == vn){
 		open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
