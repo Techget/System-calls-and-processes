@@ -82,3 +82,10 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	return 0;
 }
 
+void opf_table_init(){
+
+}
+
+void fd_table_init(){
+	
+}
