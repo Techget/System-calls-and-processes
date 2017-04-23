@@ -22,9 +22,6 @@
 
 int 
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
-	//kprintf("open(%s, %d, %d)\n", filename, flags, mode);
-	//*retval = 0;
-
 	int result = 0;
 	int index = 3;
 	size_t len;
