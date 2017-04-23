@@ -211,7 +211,7 @@ void
 kmain(char *arguments)
 {
 	boot();
-	opf_table_init()
+	opf_table_init();
 	menu(arguments);
 
 	/* Should not get here */
