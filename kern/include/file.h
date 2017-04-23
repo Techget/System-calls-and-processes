@@ -11,7 +11,7 @@
 #include <limits.h>
 
 struct fd {
-    struct opf * open_file; // the index of opfile_table
+    struct opf * open_file; 
     off_t offset;
 };
 
@@ -19,10 +19,8 @@ struct fd_table {
 	struct fd * fdt[OPEN_MAX];
 };
 
-enum opf_status{ READ, WRITE};
 
 struct opf{
-    enum opf_status *rw;
     struct vnode *vn;
     int refcount;
 };
@@ -31,6 +29,7 @@ extern struct opf * open_file_table[OPEN_MAX];
 /*
  * Put your function declarations and data types here ...
  */
+
 
 int sys_open(const char *filename, int flags, mode_t mode, int *retval);
 int sys_dup2(int oldfd, int newfd, int *retval);
