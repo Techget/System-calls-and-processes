@@ -34,12 +34,11 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	struct vnode *vn;
 	struct opf *ofile;
 
-
 	char *kbuf;
 	kbuf = (char *)kmalloc(sizeof(char)*PATH_MAX);
 
 	// copy file name string to kernel buffer
-	result = copyinstr((const_userptr_t)filename,kbuf, PATH_MAX, &len);
+	result = copyinstr((const_userptr_t)filename, kbuf, PATH_MAX, &len);
 	if(result) {
 		kfree(kbuf);
 		return result;
@@ -91,8 +90,6 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 	}
-
-
 
 	// set return value as file descriptor
 	*retval = index;
