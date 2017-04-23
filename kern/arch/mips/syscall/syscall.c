@@ -36,6 +36,8 @@
 #include <current.h>
 #include <syscall.h>
 #include <file.h>
+#include <copyinout.h>
+
 
 /*
  * System call dispatcher.
@@ -79,10 +81,10 @@ void
 syscall(struct trapframe *tf)
 {
 	int callno;
-	int32_t retval;
+	int32_t retval,retval1;
 	int err;
 	off_t offset;
-
+	int whence;
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -113,28 +115,35 @@ syscall(struct trapframe *tf)
 		
 		//--------------------------------
 		case SYS_open:
-		err = sys_open((char *)tf->tf_a0, tf->tf_a1, (mode_t)tf->tf_a2);
+		err = sys_open((char *)tf->tf_a0, tf->tf_a1, (mode_t)tf->tf_a2, &retval);
 		break;
 
 		case SYS_dup2:
-		err = sys_dup2(tf->tf_a0, tf->tf_a1);
+		err = sys_dup2(tf->tf_a0, tf->tf_a1, &retval);
 		break;
 
 		case SYS_close:
-		err = sys_close(tf->tf_a0);
+		err = sys_close(tf->tf_a0, &retval);
 		break;
 
 		case SYS_read:
-		err = sys_read(tf->tf_a0, (void *)tf->tf_a1, (size_t)tf->tf_a2);
+		err = sys_read(tf->tf_a0, (void *)tf->tf_a1, (size_t)tf->tf_a2, &retval);
 		break;
 
 		case SYS_write:
-		err = sys_write(tf->tf_a0, (void *)tf->tf_a1, (size_t)tf->tf_a2);
+		err = sys_write(tf->tf_a0, (void *)tf->tf_a1, (size_t)tf->tf_a2, &retval);
 		break;
 
 		case SYS_lseek:
-		offset = (off_t)tf->tf_a2<<32 | tf->tf_a3;
-		err = sys_lseek(tf->tf_a0,offset, tf->tf_a2);
+		offset = ((off_t)tf->tf_a2) << 32 | tf->tf_a3;
+		err = copyin((const_userptr_t)tf->tf_sp+16, &whence, sizeof(int));
+		if(err) {
+			break;
+		}
+		err = sys_lseek(tf->tf_a0, offset, whence, &retval, &retval1);
+		if(!err) {
+			tf->tf_v1 = retval1;
+		}
 		break;
 
 	    /* Add stuff here */
@@ -144,7 +153,6 @@ syscall(struct trapframe *tf)
 		err = ENOSYS;
 		break;
 	}
-
 
 	if (err) {
 		/*

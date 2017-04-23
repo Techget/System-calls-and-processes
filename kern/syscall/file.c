@@ -22,42 +22,47 @@
 
 
 int 
-sys_open(const char *filename, int flags, mode_t mode){
+sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	kprintf("open(%s, %d, %d)\n", filename, flags, mode);
-		return 0;
+	*retval = 0;
+	return 0;
 }
 
+
 int 
-sys_dup2(int oldfd, int newfd){
+sys_dup2(int oldfd, int newfd, int *retval){
 	kprintf("dup2(%d, %d)\n", oldfd, newfd);
+	*retval = 0;
 	return 0;
 }
 
 
 int 
-sys_close(int fd){
+sys_close(int fd, int *retval){
 	kprintf("close(%d )\n", fd);
+	*retval = 0;
 	return 0;
 }
 
 
 int 
-sys_read(int fd, void *buf, size_t count){
+sys_read(int fd, void *buf, size_t count, int *retval){
 	kprintf("read(%d, -, %d)\n", fd, count);
+	*retval = 0;
 	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf)*count);
+	kbuf = kmalloc(sizeof(*buf));
 
 	kfree(kbuf);
-
 	return 0;
 }
 
 
 int 
-sys_write(int fd, const void *buf, size_t count){
+sys_write(int fd, const void *buf, size_t count, int *retval){
 	kprintf("write(%d, -, %d)\n", fd, count);
+	*retval = 0;
 	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf)*count);
+	kbuf = kmalloc(sizeof(*buf));
 
 	kfree(kbuf);
 	return 0;
@@ -66,8 +71,10 @@ sys_write(int fd, const void *buf, size_t count){
 
 
 off_t 
-sys_lseek(int fd, off_t offset, int whence){
+sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	kprintf("lseek(%d, - , %d)\n", fd, whence);
+	*retval = 0;
+	*retval1 = 0;
 	void *kbuf;
 	kbuf = kmalloc(sizeof(offset));
 

@@ -4,14 +4,58 @@ switch
 	6 cases
 	call functions in file.c 
 
-/*********************** file.h *****************************/
 
+/*********************** proc.h *****************************/
 
+struct proc{
+	char *p_name;			/* Name of this process */
+	struct spinlock p_lock;		/* Lock for this structure */
+	unsigned p_numthreads;		/* Number of threads in this process */
+
+	/* VM */
+	struct addrspace *p_addrspace;	/* virtual address space */
+
+	/* VFS */
+	struct vnode *p_cwd;		/* current working directory */
+
+	struct fdesc * fdesc_table[];
+}
+
+<<<<<<< HEAD
 file descriptor structure:
 	filename
 	vnode
 	offset
+=======
+proc->fdesc_array[file_descrptor]
 
+
+/*********************** file.h *****************************/
+	
+struct file_descriptor{
+	char file_name[NAME_MAX];
+	struct opfile * open_file; // the index of opfile_table
+	int refcount;
+}
+
+//struct fdsec_table{
+	int next_insert_pos;	
+	struct fdesc * fd_array[MAX_FILES];
+//}
+
+struct opfile{
+	enum op_status *rw
+	struct vnode *vn;
+	int refcount;
+}
+
+//struct opfile_table{
+//	struct opfile *op_array[MAX_FILES]
+//}
+
+>>>>>>> 43abf807a0706101ec75f0f52864e689163081d7
+
+enum op_status{ READ, WRITE}
 
 /*********************** file.c ****************************/
 
