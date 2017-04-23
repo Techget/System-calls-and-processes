@@ -19,10 +19,7 @@ struct fd_table {
 	struct fd * fdt[OPEN_MAX];
 };
 
-enum opf_status{ READ, WRITE};
-
 struct opf{
-    enum opf_status *rw;
     struct vnode *vn;
     int refcount;
 };
