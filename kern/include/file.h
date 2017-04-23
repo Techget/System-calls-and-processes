@@ -19,16 +19,12 @@ struct fd_table {
 	struct fd * fdt[OPEN_MAX];
 };
 
-<<<<<<< HEAD
-
-=======
->>>>>>> c8d54783cd49ab418c2634518f7c30f6d46a6f61
 struct opf{
     struct vnode *vn;
     int refcount;
 };
 
-extern struct opf * open_file_table[OPEN_MAX];
+extern struct opf *open_file_table[OPEN_MAX];
 /*
  * Put your function declarations and data types here ...
  */

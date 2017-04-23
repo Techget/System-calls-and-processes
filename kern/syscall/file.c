@@ -14,6 +14,7 @@
 #include <file.h>
 #include <syscall.h>
 #include <copyinout.h>
+#include <proc.h>
 
 
 /*
@@ -102,10 +103,10 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 }
 
 void fd_table_init(void){
-
 	int i;
+
 	curproc->p_fdtable = (struct fd_table *)kmalloc(sizeof(struct fd_table));
-	
+
 	// set all the field in curproc->p_fdtable to null
 	for(i=0;i<OPEN_MAX;i++){
 		curproc->p_fdtable->fdt[i] = NULL;
