@@ -29,8 +29,6 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 
 int 
 sys_dup2(int oldfd, int newfd, int *retval){
-	//kprintf("dup2(%d, %d)\n", oldfd, newfd);
-	//*retval = 0;
 	int result = 0;
 
 	// bad file descriptor number
@@ -50,7 +48,7 @@ sys_dup2(int oldfd, int newfd, int *retval){
 	}
 	// check newfd
 	if(curproc->p_fdtable->fdt[newfd] != NULL) {
-		//result = sys_close(newfd, retval);
+		result = sys_close(newfd, retval);
 		if(result) {
 			return EBADF;
 		}
@@ -59,14 +57,57 @@ sys_dup2(int oldfd, int newfd, int *retval){
 		curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 	}
 
+	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file ;
+	curproc->p_fdtable->fdt[newfd]->flags = curproc->p_fdtable->fdt[oldfd]->flags;
+	curproc->p_fdtable->fdt[newfd]->offset = curproc->p_fdtable->fdt[oldfd]->offset;
+
+	*retval = newfd;
 
 	return 0;
 }
 
 int 
 sys_close(int fd, int *retval){
-	kprintf("close(%d )\n", fd);
+	//bad file descriptor
+	if(fd >= OPEN_MAX || fd < 0) {
+		return EBADF;
+	}
+	//check file descriptor
+	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		return EBADF;
+	}
+	//check open file
+	if(curproc->p_fdtable->fdt[fd]->open_file == NULL) {
+		return EBADF;
+	}
+
+	//check vnode
+	if(curproc->p_fdtable->fdt[fd]->open_file->vn == NULL) {
+		return EBADF;
+	}
+
+	//close vnode
+	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
+		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
+	} else {
+		curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount -= 1;
+	}
+
+	// close open file
+	if(curproc->p_fdtable->fdt[fd]->open_file->refcount == 1){
+		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
+		kfree(curproc->p_fdtable->fdt[fd]->open_file);
+	}
+ 	else {
+		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
+	}
+
+	// free file descriptor structure
+	kfree(curproc->p_fdtable->fdt[fd]);
+	curproc->p_fdtable->fdt[fd] = NULL;
+
 	*retval = 0;
+
 	return 0;
 }
 
