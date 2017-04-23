@@ -51,7 +51,9 @@
 #include <version.h>
 #include "autoconf.h"  // for pseudoconfig
 #include <file.h>
-struct opf_table open_file_table;
+#include <limits.h>
+
+struct opf * open_file_table[OPEN_MAX];
 
 /*
  * These two pieces of data are maintained by the makefiles and build system.
