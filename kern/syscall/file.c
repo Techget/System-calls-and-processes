@@ -22,8 +22,52 @@
 
 int 
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
-	kprintf("open(%s, %d, %d)\n", filename, flags, mode);
-	*retval = 0;
+	//kprintf("open(%s, %d, %d)\n", filename, flags, mode);
+	//*retval = 0;
+
+	int result = 0;
+	int index = 3;
+	size_t len;
+
+	if(!(flags==O_RDONLY || flags==O_WRONLY || flags==O_RDWR || flags==(O_RDWR|O_CREAT|O_TRUNC))) {
+		return EINVAL;
+	}
+
+	struct vnode *vn;
+
+	char *kbuf;
+	kbuf = (char *)kmalloc(sizeof(char)*PATH_MAX);
+
+	// copy file name string to kernel buffer
+	result = copyinstr((const_userptr_t)filename,kbuf, PATH_MAX, &len);
+	if(result) {
+		kfree(kbuf);
+		return result;
+	}
+
+	while(curproc->p_fdtable->fdt[index]!=NULL){
+		index++;
+	}
+	// Too many files opened
+	if(index==OPEN_MAX){
+		kfree(kbuf);
+		return ENFILE;
+	}
+	result = vfs_open(kbuf, flags, mode, &vn);
+	// error on vfs_open
+	if(result){
+		kfree(kbuf);
+		return result;
+	}
+
+	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
+	curproc->p_fdtable->fdt[index]->open_file = (struct opf *)kmalloc(sizeof(struct opf));
+	curproc->p_fdtable->fdt[index]->open_file->vn = vn;
+	curproc->p_fdtable->fdt[index]->open_file->refcount++;
+
+	// set return value as file descriptor
+	*retval = index;
+	kfree(kbuf);
 	return 0;
 }
 
