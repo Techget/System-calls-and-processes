@@ -80,6 +80,8 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	// Initialize an iovec and uio for kernel I/O.
 	uio_kinit(io_vector, uio_temp, k_buf, count, 
 		curproc->p_fdtable->fdt[fd]->offset, UIO_READ);
+	// use UIO_USERSPACE instead of UIO_SYSSPACE
+	// uio_temp->uio_segflg = UIO_USERSPACE; // confused here
 
 	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, uio_temp);
 
@@ -98,6 +100,7 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 
 	// return value is the byte count it reads.
 	*retval = count - uio_temp->uio_resid;
+	// retval should be 0 if it signifys end of file
 
 	kfree(io_vector);
 	kfree(uio_temp);
