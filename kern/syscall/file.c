@@ -101,14 +101,6 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	return 0;
 }
 
-void opf_table_init(void){
-	// set to null etc.
-
-	// vnode stdin
-
-	
-}
-
 void fd_table_init(void){
 
 	int i;
@@ -132,3 +124,69 @@ void fd_table_init(void){
 	curproc->p_fdtable->fdt[2]->open_file = open_file_table[2];
 	curproc->p_fdtable->fdt[2]->offset = 0;
 }
+
+void opf_table_init(){
+	// set all the field of open_file_table to null in the beginning
+	int i = 0;
+	for(i = 0; i<OPEN_MAX; i++){
+		open_file_table[i] = NULL;
+	}
+
+	// create struct opf for stdin/out/err
+	struct opf * opf_stdin = (struct opf *)kmalloc(sizeof(struct opf));
+	struct opf * opf_stdout = (struct opf *)kmalloc(sizeof(struct opf));
+	struct opf * opf_stderr = (struct opf *)kmalloc(sizeof(struct opf));
+
+	// set refcount to 1, since at least the system will need to use
+	// stdin/out/err
+	opf_stdin->refcount = 1;
+	opf_stdout->refcount = 1;
+	opf_stderr->refcount = 1;
+
+	// vnode for stdin/out/err
+	struct vnode * vn_stdin;
+	struct vnode * vn_stdout;
+	struct vnode * vn_stderr;
+
+	char c1[] = "con:";
+	char c2[] = "con:";
+	char c3[] = "con:";
+
+	// open the correponding vnode, if not success clean up
+	// the memory allocated.
+	if(vfs_open(c1, O_RDONLY, 0, &vn_stdin)){
+		kfree(opf_stdin);
+		kfree(opf_stdout);
+		kfree(opf_stderr);
+		vfs_close(vn_stdin);
+		kprintf("something wrong\n");
+	}
+	if(vfs_open(c2, O_WRONLY, 0, &vn_stdout)){
+		kfree(opf_stdin);
+		kfree(opf_stdout);
+		kfree(opf_stderr);
+		vfs_close(vn_stdin);
+		vfs_close(vn_stdout);
+		kprintf("something wrong\n");
+	}
+	if(vfs_open(c3, O_WRONLY, 0, &vn_stderr)){
+		kfree(opf_stdin);
+		kfree(opf_stdout);
+		kfree(opf_stderr);
+		vfs_close(vn_stdin);
+		vfs_close(vn_stdout);
+		vfs_close(vn_stderr);
+		kprintf("something wrong\n");
+	}
+
+	// set correponding field of struct opf
+	opf_stdin->vn = vn_stdin;
+	opf_stdout->vn = vn_stdout;
+	opf_stderr->vn = vn_stderr;
+
+	// set open_file_table[0,1,2] to stdin/out/err
+	open_file_table[0] = opf_stdin;
+	open_file_table[1] = opf_stdout;
+	open_file_table[2] = opf_stderr;
+}
+
