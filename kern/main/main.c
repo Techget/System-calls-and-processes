@@ -50,7 +50,8 @@
 #include <test.h>
 #include <version.h>
 #include "autoconf.h"  // for pseudoconfig
-
+#include <file.h>
+struct opf_table open_file_table;
 
 /*
  * These two pieces of data are maintained by the makefiles and build system.
@@ -210,7 +211,7 @@ void
 kmain(char *arguments)
 {
 	boot();
-
+	opf_table_init()
 	menu(arguments);
 
 	/* Should not get here */
