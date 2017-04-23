@@ -54,12 +54,53 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 
 int 
 sys_write(int fd, const void *buf, size_t count, int *retval){
-	kprintf("write(%d, -, %d)\n", fd, count);
-	*retval = 0;
+	int result = 0;
+
+	// bad file descriptor
+	if(fd >= OPEN_MAX || fd < 0) {
+		return EBADF;
+	}
+	// check file
+	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		return EBADF;
+	}
+
+	// check read only file
+	if(curproc->p_fdtable->fdt[fd]->flags == O_RDONLY) {
+		return EBADF;
+	}
+
+	struct iovec iov;
+	struct uio ku;
+
+	// create kernel buffer
 	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf));
+	kbuf = kmalloc(sizeof(*buf)*count);
+	if(kbuf == NULL) {
+		return EINVAL;
+	}
+	// copy user buffer to kernel buffer
+	result = copyin((const_userptr_t)buf,kbuf,count);
+	if(result) {
+		kfree(kbuf);
+		return result;
+	}
+
+	uio_kinit(&iov, &ku, kbuf, count ,curproc->p_fdtable->fdt[fd]->offset,UIO_WRITE);
+
+	result = VOP_WRITE(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
+	if(result) {
+		kfree(kbuf);
+		return result;
+	}
+
+	curproc->p_fdtable->fdt[fd]->offset = ku.uio_offset;
+
+	*retval = count - ku.uio_resid;
 
 	kfree(kbuf);
+
+
 	return 0;
 
 }
