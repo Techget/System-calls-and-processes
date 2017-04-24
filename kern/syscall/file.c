@@ -79,7 +79,7 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 
 	// Initialize an iovec and uio for kernel I/O.
 	uio_kinit(io_vector, uio_temp, k_buf, count, 
-		curproc->p_fdtable->fdt[fd]->offset, UIO_READ);
+		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
 	// use UIO_USERSPACE instead of UIO_SYSSPACE, since 
 	// uio_temp->uio_segflg = UIO_USERSPACE; 
 
@@ -96,7 +96,7 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	result = copyout((const void*)k_buf, (userptr_t)buf, count);
 
 	// update the offset field in file descriptor
-	curproc->p_fdtable->fdt[fd]->offset = uio_temp->uio_offset;
+	curproc->p_fdtable->fdt[fd]->open_file->offset = uio_temp->uio_offset;
 
 	// return value is the byte count it reads.
 	*retval = count - uio_temp->uio_resid;
