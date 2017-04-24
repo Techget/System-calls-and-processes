@@ -89,17 +89,14 @@ void fd_table_init(void){
 	// stdin
 	curproc->p_fdtable->fdt[0] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[0]->open_file = open_file_table[0];
-	curproc->p_fdtable->fdt[0]->offset = 0;
 	curproc->p_fdtable->fdt[0]->flags = O_RDONLY;
 	// stdout
 	curproc->p_fdtable->fdt[1] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[1]->open_file = open_file_table[1];
-	curproc->p_fdtable->fdt[1]->offset = 0;
 	curproc->p_fdtable->fdt[1]->flags = O_WRONLY;
 	// stderr
 	curproc->p_fdtable->fdt[2] = (struct fd *)kmalloc(sizeof(struct fd));
 	curproc->p_fdtable->fdt[2]->open_file = open_file_table[2];
-	curproc->p_fdtable->fdt[2]->offset = 0;
 	curproc->p_fdtable->fdt[2]->flags = O_WRONLY;
 }
 
@@ -156,6 +153,11 @@ void opf_table_init(){
 		vfs_close(vn_stderr);
 		kprintf("something wrong\n");
 	}
+
+	// initialize offset to 0
+	opf_stdin->offset = 0;
+	opf_stdout->offset = 0;
+	opf_stderr->offset = 0;
 
 	// set correponding field of struct opf
 	opf_stdin->vn = vn_stdin;
