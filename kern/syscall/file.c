@@ -90,9 +90,41 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 		return result;
 	}
 
+	off_t final_pos, file_size;
+	file_size = file_stat->st_size;
+
 	// operate according the whence value, update the offset value
 	// in open file table entry
+	if (whence == SEEK_SET) {
+		// use >= instead of >
+		if (offset >= file_size) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = offset;
+	} else if (whence == SEEK_CUR) {
+		off_t temp_offset = curproc->p_fdtable->fdt[fd]->open_file->offset + offset;
+		if (temp_offset >= file_size) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = temp_offset;
+	} else if (whence == SEEK_END) {
+		off_t temp_offset = file_size - offset;
+		if (temp_offset <= 0) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = temp_offset;
+	} else {
+		return EINVAL;
+	}
 
+	// update the offset value in open file table entry
+	curproc->p_fdtable->fdt[fd]->open_file->offset = final_pos;
+
+	*retval = (uint32_t)((offset & 0xFFFFFFFF00000000) >> 32);
+	*retval1 = (uint32_t)(offset & 0xFFFFFFFF);	
 
 	return 0;
 }
