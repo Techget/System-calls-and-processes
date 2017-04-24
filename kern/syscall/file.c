@@ -32,28 +32,27 @@ sys_dup2(int oldfd, int newfd, int *retval){
 	int result = 0;
 
 	// bad file descriptor number
-	if(oldfd >= OPEN_MAX || oldfd < 0 || newfd >= OPEN_MAX || newfd < 0) {
+	if (oldfd >= OPEN_MAX || oldfd < 0 || newfd >= OPEN_MAX || newfd < 0) {
 		return EBADF;
 	}
 
 	// Same file descriptor number
-	if(oldfd == newfd) {
+	if (oldfd == newfd) {
 		*retval = newfd;
 		return 0;
 	}
 
 	// check oldfd
-	if(curproc->p_fdtable->fdt[oldfd] == NULL) {
+	if (curproc->p_fdtable->fdt[oldfd] == NULL) {
 		return EBADF;
 	}
 	// check newfd
-	if(curproc->p_fdtable->fdt[newfd] != NULL) {
+	if (curproc->p_fdtable->fdt[newfd] != NULL) {
 		result = sys_close(newfd, retval);
 		if(result) {
 			return EBADF;
 		}
-	}
-	else {
+	} else {
 		curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 	}
 
