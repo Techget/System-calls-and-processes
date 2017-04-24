@@ -22,8 +22,82 @@
 
 int 
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
-	kprintf("open(%s, %d, %d)\n", filename, flags, mode);
-	*retval = 0;
+	int result = 0;
+	int index = 3;
+	int i=0;
+	size_t len;
+
+	if(!(flags==O_RDONLY || flags==O_WRONLY || flags==O_RDWR || flags==(O_RDWR|O_CREAT|O_TRUNC))) {
+		return EINVAL;
+	}
+
+	struct vnode *vn;
+	struct opf *ofile;
+
+	char *kbuf;
+	kbuf = (char *)kmalloc(sizeof(char)*PATH_MAX);
+
+	// copy file name string to kernel buffer
+	result = copyinstr((const_userptr_t)filename, kbuf, PATH_MAX, &len);
+	if(result) {
+		kfree(kbuf);
+		return result;
+	}
+	// check file descriptor table
+	while(curproc->p_fdtable->fdt[index]!=NULL){
+		index++;
+	}
+	// Too many files opened
+	if(index==OPEN_MAX){
+		kfree(kbuf);
+		return ENFILE;
+	}
+
+	// check open file table
+	while(open_file_table[i]!=NULL){
+		i++;
+	}
+	// Too many files in open file table 
+	if(i==OPF_TABLE_SIZE){
+		return ENFILE;
+	}
+
+	result = vfs_open(kbuf, flags, mode, &vn);
+	// error on vfs_open
+	if(result){
+		kfree(kbuf);
+		return result;
+	}
+	// create new file descriptor
+	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
+
+	i=0;
+	while(open_file_table[i]!=NULL && open_file_table[i]->vn != vn){
+		i++;
+	}
+
+	// create new open file table
+	if(open_file_table[i]==NULL){
+		ofile = (struct opf *)kmalloc(sizeof(struct opf));
+		ofile->vn = vn;
+		ofile->refcount = 1;
+		ofile->offset = 0;
+
+		curproc->p_fdtable->fdt[index]->open_file = ofile;
+		curproc->p_fdtable->fdt[index]->flags = flags;
+		open_file_table[i] = ofile;
+	}
+	// link with existing open file table
+	if(open_file_table[i]->vn == vn){
+		open_file_table[i]->refcount++;
+		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
+		curproc->p_fdtable->fdt[index]->flags = flags;
+	}
+
+	// set return value as file descriptor
+	*retval = index;
+	kfree(kbuf);
+
 	return 0;
 }
 
