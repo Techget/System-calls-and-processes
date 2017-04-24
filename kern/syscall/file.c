@@ -90,7 +90,6 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// link with existing open file table
 	if(open_file_table[i]->vn == vn){
 		open_file_table[i]->refcount++;
-		
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
 	}
