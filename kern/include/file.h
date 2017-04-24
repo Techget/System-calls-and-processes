@@ -15,7 +15,6 @@
 struct fd {
     struct opf * open_file; 
     int flags;
-    off_t offset;
 };
 
 struct fd_table {
@@ -25,6 +24,7 @@ struct fd_table {
 struct opf{
     struct vnode *vn;
     int refcount;
+    off_t offset;
 };
 
 extern struct opf * open_file_table[OPF_TABLE_SIZE];
