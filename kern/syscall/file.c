@@ -68,7 +68,7 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	void *k_buf;
 	// sizeof(*buf)*count, *buf may be char * or int *
 	// so sizeof(char)*count is the size of k_buf we need.
-	k_buf = kmalloc(sizeof(*buf)*count);
+	k_buf = kmalloc(sizeof(*buf) * count);
 	// system can't allocate such large memory as required, 
 	// then return EINVAL indicate that it is invalid or not suitable.
 	if(k_buf == NULL) {
@@ -80,12 +80,12 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	// Initialize an iovec and uio for kernel I/O.
 	uio_kinit(io_vector, uio_temp, k_buf, count, 
 		curproc->p_fdtable->fdt[fd]->offset, UIO_READ);
-	// use UIO_USERSPACE instead of UIO_SYSSPACE
-	// uio_temp->uio_segflg = UIO_USERSPACE; // confused here
+	// use UIO_USERSPACE instead of UIO_SYSSPACE, since 
+	// uio_temp->uio_segflg = UIO_USERSPACE; 
 
 	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, uio_temp);
 
-	if(result) {
+	if (result) {
 		kfree(io_vector);
 		kfree(uio_temp);
 		kfree(k_buf);
