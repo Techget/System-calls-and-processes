@@ -57,9 +57,13 @@ sys_dup2(int oldfd, int newfd, int *retval){
 		curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 	}
 
-	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file ;
+	// copy the old fd to new fd
+	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file;
 	curproc->p_fdtable->fdt[newfd]->flags = curproc->p_fdtable->fdt[oldfd]->flags;
-	curproc->p_fdtable->fdt[newfd]->offset = curproc->p_fdtable->fdt[oldfd]->offset;
+
+	// increment the refcount in open file table corresponding entry & vnode
+	curproc->p_fdtable->fdt[newfd]->open_file->refcount++;
+	curproc->p_fdtable->fdt[newfd]->open_file->vn->refcount++;
 
 	*retval = newfd;
 
