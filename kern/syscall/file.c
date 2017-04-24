@@ -65,7 +65,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// set return value as file descriptor
 	*retval = index;
 	kfree(kbuf);
-	
+
 	return 0;
 }
 
