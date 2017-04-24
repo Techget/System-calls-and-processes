@@ -190,12 +190,69 @@ sys_close(int fd, int *retval){
 
 int 
 sys_read(int fd, void *buf, size_t count, int *retval){
-	kprintf("read(%d, -, %d)\n", fd, count);
-	*retval = 0;
-	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf));
+	int result=0;
+	// verify the validaty of file handler
+	if(fd >= OPEN_MAX || fd < 0) {
+		return EBADF;
+	}
 
-	kfree(kbuf);
+	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		return EBADF;
+	}
+
+	if(curproc->p_fdtable->fdt[fd]->open_file == NULL) {
+		return EBADF;
+	}
+	// open mode goes wrong, can't read with write only access
+	if(curproc->p_fdtable->fdt[fd]->flags == O_WRONLY){
+		return EBADF;
+	}
+	
+	struct iovec * io_vector;
+	io_vector = (struct iovec *)kmalloc(sizeof(struct iovec));
+	struct uio * uio_temp;
+	uio_temp = (struct uio *)kmalloc(sizeof(struct uio));
+	void *k_buf;
+	// sizeof(*buf)*count, *buf may be char * or int *
+	// so sizeof(char)*count is the size of k_buf we need.
+	k_buf = kmalloc(sizeof(*buf) * count);
+	// system can't allocate such large memory as required, 
+	// then return EINVAL indicate that it is invalid or not suitable.
+	if(k_buf == NULL) {
+		kfree(io_vector);
+		kfree(uio_temp);
+		return EINVAL;
+	}
+
+	// Initialize an iovec and uio for kernel I/O.
+	uio_kinit(io_vector, uio_temp, k_buf, count, 
+		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
+	// use UIO_USERSPACE instead of UIO_SYSSPACE, since 
+	// uio_temp->uio_segflg = UIO_USERSPACE; 
+
+	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, uio_temp);
+
+	if (result) {
+		kfree(io_vector);
+		kfree(uio_temp);
+		kfree(k_buf);
+		return result;
+	}
+
+	// copy the buffer in kernel to userspace buf
+	result = copyout((const void*)k_buf, (userptr_t)buf, count);
+
+	// update the offset field in file descriptor
+	curproc->p_fdtable->fdt[fd]->open_file->offset = uio_temp->uio_offset;
+
+	// return value is the byte count it reads.
+	*retval = count - uio_temp->uio_resid;
+	// retval should be 0 if it signifys end of file
+
+	kfree(io_vector);
+	kfree(uio_temp);
+	kfree(k_buf);
+
 	return 0;
 }
 
