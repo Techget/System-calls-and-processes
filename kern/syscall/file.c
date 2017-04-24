@@ -34,8 +34,6 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		return EINVAL;
 	}
 
-
-	
 	struct vnode *vn;
 	struct opf *ofile;
 
@@ -91,12 +89,17 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
 		open_file_table[i] = ofile;
+
+		kprintf("sys_open(create new)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
 	}
 	// link with existing open file table
 	if(open_file_table[i]->vn == vn){
 		open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
+
+		kprintf("sys_open(open exist)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
+
 	}
 
 	// set return value as file descriptor
@@ -254,11 +257,55 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	*retval = count - uio_temp->uio_resid;
 	// retval should be 0 if it signifys end of file
 
+
+	kprintf("sys_read(%d, -, %d, %d), %ld\n", fd, count, count - uio_temp->uio_resid, (long)curproc->p_fdtable->fdt[fd]->open_file->offset);
+
+
 	kfree(io_vector);
 	kfree(uio_temp);
 	kfree(k_buf);
 
+/*
+	int result=0;
+
+	if(fd >= OPEN_MAX || fd < 0) {
+		return EBADF;
+	}
+
+	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		return EBADF;
+	}
+
+	if (curproc->p_fdtable->fdt[fd]->flags == O_WRONLY) {
+		return EBADF;
+	}
+
+	struct iovec iov;
+	struct uio ku;
+	void *kbuf;
+	kbuf = kmalloc(sizeof(*buf)*count);
+	if(kbuf == NULL) {
+		return EINVAL;
+	}
+
+
+	uio_kinit(&iov, &ku, kbuf, count ,
+		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
+
+	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
+	if(result) {
+		kfree(kbuf);
+		return result;
+	}
+
+	curproc->p_fdtable->fdt[fd]->open_file->offset = ku.uio_offset;
+
+	*retval = count - ku.uio_resid;
+
+	kfree(kbuf);
+*/
 	return 0;
+
 }
 
 int 
