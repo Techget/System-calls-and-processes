@@ -27,10 +27,15 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int i=0;
 	size_t len;
 
-	if(!(flags==O_RDONLY || flags==O_WRONLY || flags==O_RDWR || flags==(O_RDWR|O_CREAT|O_TRUNC))) {
+
+	//kprintf("sys_open(%s,%d)->%d\n", filename,flags, index);
+
+	if(flags<0 ||flags>127) {
 		return EINVAL;
 	}
 
+
+	
 	struct vnode *vn;
 	struct opf *ofile;
 
