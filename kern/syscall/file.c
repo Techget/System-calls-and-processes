@@ -81,6 +81,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		ofile = (struct opf *)kmalloc(sizeof(struct opf));
 		ofile->vn = vn;
 		ofile->refcount = 1;
+		ofile->offset = 0;
 
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		open_file_table[i] = ofile;
