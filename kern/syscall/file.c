@@ -66,13 +66,34 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 off_t 
 sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
-	kprintf("lseek(%d, - , %d)\n", fd, whence);
-	*retval = 0;
-	*retval1 = 0;
-	void *kbuf;
-	kbuf = kmalloc(sizeof(offset));
+	int result;
+	// ###### sanity check ########
+	// check fd validity
+	if (fd >= OPEN_MAX || fd < 0){
+		return EBADF;
+	}
 
-	kfree(kbuf);
+	if (curproc->p_fdtable->fdt[fd] == NULL || 
+		curproc->p_fdtable->fdt[fd]->open_file == NULL){
+		return EBADF;
+	}
+	// use isseekable to check the underlying device is seekable or not
+	if (VOP_ISSEEKABLE(curproc->p_fdtable->fdt[fd]->open_file->vn)) {
+		return ESPIPE;
+	}
+
+	// get the file info 
+	struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
+	result = VOP_STAT(curproc->p_fdtable->fdt[fd]->open_file->vn, file_stat);
+	if (result) {
+		kfree(file_stat);
+		return result;
+	}
+
+	// operate according the whence value, update the offset value
+	// in open file table entry
+
+
 	return 0;
 }
 
