@@ -95,7 +95,7 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 		return result;
 	}
 
-	curproc->p_fdtable->fdt[fd]->offset = ku.uio_offset;
+	curproc->p_fdtable->fdt[fd]->open_file->offset = ku.uio_offset;
 
 	*retval = count - ku.uio_resid;
 
