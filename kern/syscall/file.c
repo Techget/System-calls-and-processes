@@ -139,13 +139,66 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 off_t 
 sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
-	kprintf("lseek(%d, - , %d)\n", fd, whence);
-	*retval = 0;
-	*retval1 = 0;
-	void *kbuf;
-	kbuf = kmalloc(sizeof(offset));
+	int result;
+	// ###### sanity check ########
+	// check fd validity
+	if (fd >= OPEN_MAX || fd < 0){
+		return EBADF;
+	}
 
-	kfree(kbuf);
+	if (curproc->p_fdtable->fdt[fd] == NULL || 
+		curproc->p_fdtable->fdt[fd]->open_file == NULL){
+		return EBADF;
+	}
+	// use isseekable to check the underlying device is seekable or not
+	if (VOP_ISSEEKABLE(curproc->p_fdtable->fdt[fd]->open_file->vn)) {
+		return ESPIPE;
+	}
+
+	// get the file info 
+	struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
+	result = VOP_STAT(curproc->p_fdtable->fdt[fd]->open_file->vn, file_stat);
+	if (result) {
+		kfree(file_stat);
+		return result;
+	}
+
+	off_t final_pos, file_size;
+	file_size = file_stat->st_size;
+
+	// operate according the whence value, update the offset value
+	// in open file table entry
+	if (whence == SEEK_SET) {
+		// use >= instead of >
+		if (offset >= file_size) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = offset;
+	} else if (whence == SEEK_CUR) {
+		off_t temp_offset = curproc->p_fdtable->fdt[fd]->open_file->offset + offset;
+		if (temp_offset >= file_size) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = temp_offset;
+	} else if (whence == SEEK_END) {
+		off_t temp_offset = file_size - offset;
+		if (temp_offset <= 0) {
+			kfree(file_stat);
+			return EINVAL;
+		}
+		final_pos = temp_offset;
+	} else {
+		return EINVAL;
+	}
+
+	// update the offset value in open file table entry
+	curproc->p_fdtable->fdt[fd]->open_file->offset = final_pos;
+
+	*retval = (uint32_t)((offset & 0xFFFFFFFF00000000) >> 32);
+	*retval1 = (uint32_t)(offset & 0xFFFFFFFF);	
+
 	return 0;
 }
 
