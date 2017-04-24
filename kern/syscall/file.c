@@ -80,16 +80,17 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 		return EINVAL;
 	}
 	// copy user buffer to kernel buffer
-	result = copyin((const_userptr_t)buf,kbuf,count);
-	if(result) {
+	result = copyin((const_userptr_t)buf, kbuf, count);
+	if (result) {
 		kfree(kbuf);
 		return result;
 	}
 
-	uio_kinit(&iov, &ku, kbuf, count ,curproc->p_fdtable->fdt[fd]->offset,UIO_WRITE);
+	uio_kinit(&iov, &ku, kbuf, count ,
+		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_WRITE);
 
 	result = VOP_WRITE(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
-	if(result) {
+	if (result) {
 		kfree(kbuf);
 		return result;
 	}
@@ -100,9 +101,7 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 	kfree(kbuf);
 
-
 	return 0;
-
 }
 
 off_t 
