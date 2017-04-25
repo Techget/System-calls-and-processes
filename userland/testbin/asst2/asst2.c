@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <err.h>
 #include <errno.h>
-#include <limits.h>
 
 #define MAX_BUF 500
 char teststr[] = "The quick brown fox jumped over the lazy dog.";
@@ -123,49 +122,5 @@ main(int argc, char * argv[])
         printf("* closing file\n");
         close(fd);
 
-
-        printf("**********\n* testing the OPEN_MAX limit\n");
-        int fd_arr[OPEN_MAX];
-        for(i=0; i<OPEN_MAX; i++){
-                char file_name[16];
-                snprintf(file_name, sizeof(file_name), "test.file%d", i);
-                fd_arr[i] = open(file_name, O_RDWR | O_CREAT );
-        }
-        printf("finish file handler create loop\n");
-        if(fd_arr[OPEN_MAX-1] < 0 && fd_arr[OPEN_MAX - 2] < 0){
-                printf("*limit works\n");
-        }
-
-        printf("**********\n* testing dup2\n");
-        char buf_dup2[MAX_BUF];
-        close(fd_arr[0]);
-        fd_arr[0] = open("test.file", O_RDONLY);
-        dup2(fd_arr[0], fd_arr[1]);
-        printf("after dup2, fd_arr[0]:%d fd_arr[1]:%d\n", fd_arr[0], fd_arr[1]);
-        i = 0;
-        do  {
-                printf("* attemping read of %d bytes\n", 10 - i );
-                r = read(fd_arr[0], &buf_dup2[i], 10 - i);
-                printf("* read %d bytes\n", r);
-                i += r;
-        } while (i < 10 && r > 0);
-        printf("the file read by fd_arr[0]: %s\n",buf_dup2);
-
-        i = 0;
-        do  {
-                printf("* attemping read of %d bytes\n", 10 - i );
-                r = read(fd_arr[1], &buf_dup2[i], 10 - i);
-                printf("* read %d bytes\n", r);
-                i += r;
-        } while (i < 10 && r > 0);
-        printf("the file read by fd_arr[1]: %s\n",buf_dup2);
-
-
-        for(i=0; i<OPEN_MAX; i++){
-                close(fd_arr[i]);
-        }
-
         return 0;
 }
-
-
