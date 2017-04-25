@@ -369,7 +369,7 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 		return EBADF;
 	}
 	// use isseekable to check the underlying device is seekable or not
-	if (VOP_ISSEEKABLE(curproc->p_fdtable->fdt[fd]->open_file->vn)) {
+	if (!VOP_ISSEEKABLE(curproc->p_fdtable->fdt[fd]->open_file->vn)) {
 		return ESPIPE;
 	}
 
