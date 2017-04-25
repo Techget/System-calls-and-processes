@@ -90,16 +90,14 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->flags = flags;
 		open_file_table[i] = ofile;
 
-		kprintf("sys_open(create new)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
-	}
-	// link with existing open file table
-	if(open_file_table[i]->vn == vn){
+		// kprintf("sys_open(create new)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
+	} else if(open_file_table[i]->vn == vn){
+		// link with existing open file table
 		open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
 
-		kprintf("sys_open(open exist)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
-
+		// kprintf("sys_open(open exist)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
 	}
 
 	// set return value as file descriptor
@@ -174,16 +172,24 @@ sys_close(int fd, int *retval){
 	//close vnode
 	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
 		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
+		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
 	} else {
 		curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount -= 1;
 	}
 
 	// close open file
 	if(curproc->p_fdtable->fdt[fd]->open_file->refcount == 1){
-		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
-		kfree(curproc->p_fdtable->fdt[fd]->open_file);
-	}
- 	else {
+		// curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
+		int i = 0;
+		for(i=0; i<OPF_TABLE_SIZE; i++){
+			if(curproc->p_fdtable->fdt[fd]->open_file == open_file_table[i]){
+				// kprintf("close open file, i: %d\n",i);
+				break;
+			}
+		}
+		kfree(curproc->p_fdtable->fdt[fd]->open_file);	
+		open_file_table[i] = NULL;
+	} else {
 		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
 	}
 
@@ -215,97 +221,86 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	if(curproc->p_fdtable->fdt[fd]->flags == O_WRONLY){
 		return EBADF;
 	}
+
+	// int end_of_file_flag = 0;
+	// struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
+	// result = VOP_STAT(curproc->p_fdtable->fdt[fd]->open_file->vn, file_stat);
+	// if (result) {
+	// 	kfree(file_stat);
+	// 	return result;
+	// }
+	// if (file_stat->st_size <= curproc->p_fdtable->fdt[fd]->open_file->offset) {
+	// 	end_of_file_flag = 1;
+	// }
+	// if (file_stat->st_size <= curproc->p_fdtable->fdt[fd]->open_file->offset + count) {
+	// 	count = file_stat->st_size - curproc->p_fdtable->fdt[fd]->open_file->offset;
+	// }
 	
 	struct iovec * io_vector;
 	io_vector = (struct iovec *)kmalloc(sizeof(struct iovec));
 	struct uio * uio_temp;
 	uio_temp = (struct uio *)kmalloc(sizeof(struct uio));
-	void *k_buf;
-	// sizeof(*buf)*count, *buf may be char * or int *
-	// so sizeof(char)*count is the size of k_buf we need.
-	k_buf = kmalloc(sizeof(*buf) * count);
-	// system can't allocate such large memory as required, 
-	// then return EINVAL indicate that it is invalid or not suitable.
-	if(k_buf == NULL) {
-		kfree(io_vector);
-		kfree(uio_temp);
-		return EINVAL;
-	}
+	// void *k_buf;
+	// // sizeof(*buf)*count, *buf may be char * or int *
+	// // so sizeof(char)*count is the size of k_buf we need.
+	// k_buf = kmalloc(sizeof(*buf) * count);
+	// // system can't allocate such large memory as required, 
+	// // then return EINVAL indicate that it is invalid or not suitable.
+	// if(k_buf == NULL) {
+	// 	kfree(io_vector);
+	// 	kfree(uio_temp);
+	// 	return EINVAL;
+	// }
 
 	// Initialize an iovec and uio for kernel I/O.
-	uio_kinit(io_vector, uio_temp, k_buf, count, 
-		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
-	// use UIO_USERSPACE instead of UIO_SYSSPACE, since 
+	// uio_kinit(io_vector, uio_temp, k_buf, count, 
+	// 	curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
+	// // use UIO_USERSPACE instead of UIO_SYSSPACE, since 
 	// uio_temp->uio_segflg = UIO_USERSPACE; 
+	// uio_temp->uio_space = curproc->p_addrspace;
+	io_vector->iov_ubase = (userptr_t)buf;
+	// io_vector->iov_kbase = k_buf;
+	io_vector->iov_len = count;
+	uio_temp->uio_iov = io_vector;
+	uio_temp->uio_iovcnt = 1;
+	uio_temp->uio_offset = curproc->p_fdtable->fdt[fd]->open_file->offset;
+	uio_temp->uio_resid = count;
+	uio_temp->uio_segflg = UIO_USERSPACE;
+	uio_temp->uio_rw = UIO_READ;
+	uio_temp->uio_space = curproc->p_addrspace;
 
 	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, uio_temp);
 
 	if (result) {
 		kfree(io_vector);
 		kfree(uio_temp);
-		kfree(k_buf);
+		// kfree(k_buf);
 		return result;
 	}
+	// kprintf("%s\n",(char *)k_buf);
+	// kprintf("%s\n",(char *)buf);
 
 	// copy the buffer in kernel to userspace buf
-	result = copyout((const void*)k_buf, (userptr_t)buf, count);
+	// result = copyout((const void*)k_buf, (userptr_t)buf, count);
 
 	// update the offset field in file descriptor
 	curproc->p_fdtable->fdt[fd]->open_file->offset = uio_temp->uio_offset;
 
 	// return value is the byte count it reads.
+	// if (end_of_file_flag) {
+	// 	*retval = 0;
+	// } else {
 	*retval = count - uio_temp->uio_resid;
+	//}
 	// retval should be 0 if it signifys end of file
 
-
-	kprintf("sys_read(%d, -, %d, %d), %ld\n", fd, count, count - uio_temp->uio_resid, (long)curproc->p_fdtable->fdt[fd]->open_file->offset);
-
+	// kprintf("sys_read(%d, -, %d, %d), %ld\n", fd, count, count - uio_temp->uio_resid, (long)curproc->p_fdtable->fdt[fd]->open_file->offset);
 
 	kfree(io_vector);
 	kfree(uio_temp);
-	kfree(k_buf);
+	// kfree(k_buf);
 
-/*
-	int result=0;
-
-	if(fd >= OPEN_MAX || fd < 0) {
-		return EBADF;
-	}
-
-	if(curproc->p_fdtable->fdt[fd] == NULL) {
-		return EBADF;
-	}
-
-	if (curproc->p_fdtable->fdt[fd]->flags == O_WRONLY) {
-		return EBADF;
-	}
-
-	struct iovec iov;
-	struct uio ku;
-	void *kbuf;
-	kbuf = kmalloc(sizeof(*buf)*count);
-	if(kbuf == NULL) {
-		return EINVAL;
-	}
-
-
-	uio_kinit(&iov, &ku, kbuf, count ,
-		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
-
-	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
-	if(result) {
-		kfree(kbuf);
-		return result;
-	}
-
-	curproc->p_fdtable->fdt[fd]->open_file->offset = ku.uio_offset;
-
-	*retval = count - ku.uio_resid;
-
-	kfree(kbuf);
-*/
 	return 0;
-
 }
 
 int 
