@@ -51,7 +51,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		index++;
 	}
 	// Too many files opened
-	if(index==OPEN_MAX){
+	if(index>=OPEN_MAX){
 		kfree(kbuf);
 		return ENFILE;
 	}
@@ -61,7 +61,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		i++;
 	}
 	// Too many files in open file table 
-	if(i==OPF_TABLE_SIZE){
+	if(i>=OPF_TABLE_SIZE){
 		return ENFILE;
 	}
 
@@ -132,9 +132,9 @@ sys_dup2(int oldfd, int newfd, int *retval){
 		if(result) {
 			return EBADF;
 		}
-	} else {
-		curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 	}
+
+	curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 
 	// copy the old fd to new fd
 	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file;
