@@ -17,19 +17,15 @@
 #include <proc.h>
 
 /*
- * Add your file-related functions here ...
- */
-
+*	deal with open system call
+*/
 int 
 sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int result = 0;
 	int index = 3;
 	int i=0;
 	size_t len;
-
-
-	//kprintf("sys_open(%s,%d)->%d\n", filename,flags, index);
-
+	// check flags
 	if(flags<0 ||flags>127) {
 		return EINVAL;
 	}
@@ -89,15 +85,11 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
 		open_file_table[i] = ofile;
-
-		// kprintf("sys_open(create new)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
 	} else if(open_file_table[i]->vn == vn){
 		// link with existing open file table
 		open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
-
-		// kprintf("sys_open(open exist)->%d, %d\n", index, curproc->p_fdtable->fdt[index]->open_file->vn->vn_refcount);//test
 	}
 
 	// set return value as file descriptor
@@ -107,6 +99,9 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	return 0;
 }
 
+/*
+*	deal with dup2 system call
+*/
 int 
 sys_dup2(int oldfd, int newfd, int *retval){
 	int result = 0;
@@ -133,7 +128,7 @@ sys_dup2(int oldfd, int newfd, int *retval){
 			return EBADF;
 		}
 	}
-
+	// create a new file descriptor instance and assign it to newfd
 	curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
 
 	// copy the old fd to new fd
@@ -149,6 +144,9 @@ sys_dup2(int oldfd, int newfd, int *retval){
 	return 0;
 }
 
+/*
+*	deal with close system call
+*/
 int 
 sys_close(int fd, int *retval){
 	//bad file descriptor
@@ -183,7 +181,6 @@ sys_close(int fd, int *retval){
 		int i = 0;
 		for(i=0; i<OPF_TABLE_SIZE; i++){
 			if(curproc->p_fdtable->fdt[fd]->open_file == open_file_table[i]){
-				// kprintf("close open file, i: %d\n",i);
 				break;
 			}
 		}
@@ -202,6 +199,9 @@ sys_close(int fd, int *retval){
 	return 0;
 }
 
+/*
+*	deal with read system call
+*/
 int 
 sys_read(int fd, void *buf, size_t count, int *retval){
 	int result=0;
@@ -221,45 +221,14 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	if(curproc->p_fdtable->fdt[fd]->flags == O_WRONLY){
 		return EBADF;
 	}
-
-	// int end_of_file_flag = 0;
-	// struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
-	// result = VOP_STAT(curproc->p_fdtable->fdt[fd]->open_file->vn, file_stat);
-	// if (result) {
-	// 	kfree(file_stat);
-	// 	return result;
-	// }
-	// if (file_stat->st_size <= curproc->p_fdtable->fdt[fd]->open_file->offset) {
-	// 	end_of_file_flag = 1;
-	// }
-	// if (file_stat->st_size <= curproc->p_fdtable->fdt[fd]->open_file->offset + count) {
-	// 	count = file_stat->st_size - curproc->p_fdtable->fdt[fd]->open_file->offset;
-	// }
-	
+	// iov_vector will be needed for uio
 	struct iovec * io_vector;
 	io_vector = (struct iovec *)kmalloc(sizeof(struct iovec));
 	struct uio * uio_temp;
 	uio_temp = (struct uio *)kmalloc(sizeof(struct uio));
-	// void *k_buf;
-	// // sizeof(*buf)*count, *buf may be char * or int *
-	// // so sizeof(char)*count is the size of k_buf we need.
-	// k_buf = kmalloc(sizeof(*buf) * count);
-	// // system can't allocate such large memory as required, 
-	// // then return EINVAL indicate that it is invalid or not suitable.
-	// if(k_buf == NULL) {
-	// 	kfree(io_vector);
-	// 	kfree(uio_temp);
-	// 	return EINVAL;
-	// }
-
-	// Initialize an iovec and uio for kernel I/O.
-	// uio_kinit(io_vector, uio_temp, k_buf, count, 
-	// 	curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_READ);
-	// // use UIO_USERSPACE instead of UIO_SYSSPACE, since 
-	// uio_temp->uio_segflg = UIO_USERSPACE; 
-	// uio_temp->uio_space = curproc->p_addrspace;
+	// initialize uio, copy directly from kernel to user mode buffer
+	// so we need to set the address space to user mode address space
 	io_vector->iov_ubase = (userptr_t)buf;
-	// io_vector->iov_kbase = k_buf;
 	io_vector->iov_len = count;
 	uio_temp->uio_iov = io_vector;
 	uio_temp->uio_iovcnt = 1;
@@ -274,35 +243,21 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 	if (result) {
 		kfree(io_vector);
 		kfree(uio_temp);
-		// kfree(k_buf);
 		return result;
 	}
-	// kprintf("%s\n",(char *)k_buf);
-	// kprintf("%s\n",(char *)buf);
-
-	// copy the buffer in kernel to userspace buf
-	// result = copyout((const void*)k_buf, (userptr_t)buf, count);
-
-	// update the offset field in file descriptor
 	curproc->p_fdtable->fdt[fd]->open_file->offset = uio_temp->uio_offset;
 
-	// return value is the byte count it reads.
-	// if (end_of_file_flag) {
-	// 	*retval = 0;
-	// } else {
 	*retval = count - uio_temp->uio_resid;
-	//}
-	// retval should be 0 if it signifys end of file
-
-	// kprintf("sys_read(%d, -, %d, %d), %ld\n", fd, count, count - uio_temp->uio_resid, (long)curproc->p_fdtable->fdt[fd]->open_file->offset);
 
 	kfree(io_vector);
 	kfree(uio_temp);
-	// kfree(k_buf);
 
 	return 0;
 }
 
+/*
+*	deal with write system call
+*/
 int 
 sys_write(int fd, const void *buf, size_t count, int *retval){
 	int result = 0;
@@ -339,22 +294,24 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 	uio_kinit(&iov, &ku, kbuf, count ,
 		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_WRITE);
-
+	// make use of vnode operation
 	result = VOP_WRITE(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
 	if (result) {
 		kfree(kbuf);
 		return result;
 	}
-
+	// update the offset
 	curproc->p_fdtable->fdt[fd]->open_file->offset = ku.uio_offset;
 
 	*retval = count - ku.uio_resid;
-
 	kfree(kbuf);
 
 	return 0;
 }
 
+/*
+*	deal with lseek system call
+*/
 off_t 
 sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	int result;
@@ -420,6 +377,9 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	return 0;
 }
 
+/*
+*	init function for per process file descriptor table
+*/
 void fd_table_init(void){
 	int i;
 
@@ -444,6 +404,9 @@ void fd_table_init(void){
 	curproc->p_fdtable->fdt[2]->flags = O_WRONLY;
 }
 
+/*
+*	init function for global open file table
+*/
 void opf_table_init(){
 	// set all the field of open_file_table to null in the beginning
 	int i = 0;
