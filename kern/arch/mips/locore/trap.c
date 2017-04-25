@@ -220,8 +220,10 @@ mips_trap(struct trapframe *tf)
 
 		DEBUG(DB_SYSCALL, "syscall: #%d, args %x %x %x %x\n",
 		      tf->tf_v0, tf->tf_a0, tf->tf_a1, tf->tf_a2, tf->tf_a3);
-
+		// disable interrupt, solve the concurrency problem brutely.
+		cpu_irqoff();
 		syscall(tf);
+		cpu_irqon();
 		goto done;
 	}
 
