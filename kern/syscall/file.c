@@ -75,7 +75,6 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 
 	// O_APPEND flag
 	if(flags & O_APPEND){
-		kprintf("O_APPEND");
 		struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
 		result = VOP_STAT(vn, file_stat);
 		if (result) {
