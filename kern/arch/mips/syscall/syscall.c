@@ -154,12 +154,23 @@ syscall(struct trapframe *tf)
 		break;
 	}
 
+
+
+
+
+
 	if (err) {
 		/*
 		 * Return the error code. This gets converted at
 		 * userlevel to a return value of -1 and the error
 		 * code in errno.
 		 */
+
+	//  open        read        write       close      lseek       dup2
+	if(callno==45||callno==50||callno==55||callno==49||callno==59||callno==48){
+		//kprintf("SYSCALL %d ERROR %d\n", callno,err);
+	}
+
 		tf->tf_v0 = err;
 		tf->tf_a3 = 1;      /* signal an error */
 	}

@@ -264,15 +264,18 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 
 	// bad file descriptor
 	if(fd >= OPEN_MAX || fd < 0) {
+		kprintf("W EBADF fd\n");
 		return EBADF;
 	}
 	// check file
 	if(curproc->p_fdtable->fdt[fd] == NULL) {
+		kprintf("W EBADF fdt\n");
 		return EBADF;
 	}
 
 	// check read only file
 	if(curproc->p_fdtable->fdt[fd]->flags == O_RDONLY) {
+		kprintf("W EBADF ro\n");
 		return EBADF;
 	}
 
