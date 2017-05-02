@@ -22,6 +22,7 @@
 int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int result = 0;
 	int index = 3;
+	size_t offset = 0;
 	int i=0;
 	size_t len;
 	// check flags
@@ -69,6 +70,24 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// create new file descriptor
 	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
 
+	// O_APPEND flag
+	if(flags & O_APPEND){
+		kprintf("O_APPEND");
+		struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
+		result = VOP_STAT(vn, file_stat);
+		if (result) {
+			kfree(file_stat);
+			return result;
+		}
+
+		offset = file_stat->st_size;
+
+		kfree(file_stat);
+	}else{
+		offset = 0;
+	}
+
+
 	i=0;
 	while(open_file_table[i]!=NULL && open_file_table[i]->vn != vn){
 		i++;
@@ -79,7 +98,7 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		ofile = (struct opf *)kmalloc(sizeof(struct opf));
 		ofile->vn = vn;
 		ofile->refcount = 1;
-		ofile->offset = 0;
+		ofile->offset = offset;
 
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
@@ -90,6 +109,11 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
 	}
+
+
+
+
+
 
 	// set return value as file descriptor
 	*retval = index;

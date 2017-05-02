@@ -91,10 +91,8 @@ O_APPEND error
 
 		close(fd);
 
-
-
-		fd = open("test.file", O_RDWR | O_APPEND);
-		printf("* open() got fd %d\n", fd);
+		fd = open("test.file", O_RDWR|O_APPEND);
+		printf("* open() with APPEND got fd %d\n", fd);
 		if (fd < 0) {
 			printf("ERROR opening file: %s\n", strerror(errno));
 			exit(1);
