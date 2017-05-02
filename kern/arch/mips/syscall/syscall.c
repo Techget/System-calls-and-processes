@@ -38,6 +38,7 @@
 #include <file.h>
 #include <copyinout.h>
 #include <endian.h>
+#include <sync.h>
 
 /*
  * System call dispatcher.

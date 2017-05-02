@@ -52,11 +52,13 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	}
 
 	// check open file table
-	while(open_file_table[i]!=NULL){
+	lock_acquire(global_opf_table->lk);
+	while(global_opf_table->open_file_table[i]!=NULL){
 		i++;
 	}
 	// Too many files in open file table 
 	if(i>=OPF_TABLE_SIZE){
+		lock_release(global_opf_table->lk);
 		return ENFILE;
 	}
 
@@ -64,18 +66,19 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// error on vfs_open
 	if(result){
 		kfree(kbuf);
+		lock_release(global_opf_table->lk);
 		return result;
 	}
 	// create new file descriptor
 	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
 
 	i=0;
-	while(open_file_table[i]!=NULL && open_file_table[i]->vn != vn){
+	while(global_opf_table->open_file_table[i]!=NULL && global_opf_table->open_file_table[i]->vn != vn){
 		i++;
 	}
 
 	// create new open file table
-	if(open_file_table[i]==NULL){
+	if(global_opf_table->open_file_table[i]==NULL){
 		ofile = (struct opf *)kmalloc(sizeof(struct opf));
 		ofile->vn = vn;
 		ofile->refcount = 1;
@@ -83,13 +86,15 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
-		open_file_table[i] = ofile;
-	} else if(open_file_table[i]->vn == vn){
+		global_opf_table->open_file_table[i] = ofile;
+	} else if(global_opf_table->open_file_table[i]->vn == vn){
 		// link with existing open file table
-		open_file_table[i]->refcount++;
-		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
+		global_opf_table->open_file_table[i]->refcount++;
+		curproc->p_fdtable->fdt[index]->open_file = global_opf_table->open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
 	}
+	// after add to global open file table release the lock
+	lock_release(global_opf_table->lk);
 
 	// set return value as file descriptor
 	*retval = index;
@@ -378,6 +383,9 @@ void fd_table_init(void){
 
 	curproc->p_fdtable = (struct fd_table *)kmalloc(sizeof(struct fd_table));
 
+	// initialize the lock
+	curproc->p_fdtable->lk = lock_create("fdtable");
+
 	// set all the field in curproc->p_fdtable to null
 	for(i=0;i<OPEN_MAX;i++){
 		curproc->p_fdtable->fdt[i] = NULL;
@@ -401,16 +409,25 @@ void fd_table_init(void){
 *	init function for global open file table
 */
 void opf_table_init(){
+	global_opf_table = kmalloc((struct opf_table *)sizeof(struct opf_table));
+	// create global open file table lock
+	global_opf_table->lk = lock_create("global_open_file_table");
+
 	// set all the field of open_file_table to null in the beginning
 	int i = 0;
 	for(i = 0; i<OPF_TABLE_SIZE; i++){
-		open_file_table[i] = NULL;
+		global_opf_table->open_file_table[i] = NULL;
 	}
 
 	// create struct opf for stdin/out/err
 	struct opf * opf_stdin = (struct opf *)kmalloc(sizeof(struct opf));
 	struct opf * opf_stdout = (struct opf *)kmalloc(sizeof(struct opf));
 	struct opf * opf_stderr = (struct opf *)kmalloc(sizeof(struct opf));
+
+	// initialize the lock for each opf entry
+	opf_stdin->lk = lock_create("opf_stdin");
+	opf_stdout->lk = lock_create("opf_stdout");
+	opf_stderr->lk = lock_create("opf_stderr");
 
 	// set refcount to 1, since at least the system will need to use
 	// stdin/out/err
@@ -462,7 +479,7 @@ void opf_table_init(){
 	opf_stderr->vn = vn_stderr;
 
 	// set open_file_table[0,1,2] to stdin/out/err
-	open_file_table[0] = opf_stdin;
-	open_file_table[1] = opf_stdout;
-	open_file_table[2] = opf_stderr;
+	global_opf_table->open_file_table[0] = opf_stdin;
+	global_opf_table->open_file_table[1] = opf_stdout;
+	global_opf_table->open_file_table[2] = opf_stderr;
 }

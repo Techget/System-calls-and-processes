@@ -19,7 +19,7 @@ Open/Close make use of vfs_open, vfs_open, which are vfs operations, for operati
 
 Syscall is executed in kernel mode, where interrupt is disabled, so 
 
-With every open() system call, user gets its own private reference number known as file descriptor. 2. Separate entries are created in user file descriptor and global file table, but only the reference count is increased in the vnode table. 3. all the system calls related to file handling use these tables for data manipulation.
+1. With every open() system call, user gets its own private reference number known as file descriptor. 2. Separate entries are created in user file descriptor and global file table, but only the reference count is increased in the vnode table. 3. all the system calls related to file handling use these tables for data manipulation.
 
 Global File table. It contains information that is global to the kernel e.g. the byte offset in the file where the user's next read/write will start and the access rights allowed to the opening process. 
 
@@ -28,6 +28,11 @@ Process File Descriptor table. It is local to every process and contains informa
 We need global open file table for dup2() and fork()
 
 dup() system call doesn’t create a separate entry in the global file table like the open() system call, instead it just increments the count field of the entry pointed to by the given input file descriptor in the global file table.
+
+/********************concurrency issues***********************/
+
+Share resource: per process file descriptor table, global open file table, global open file table entry(opf)
+Nonshare resource: file descriptor
 
 /********************** syscall.c ***************************/
 
@@ -69,6 +74,13 @@ struct opf{
     int refcount;
     off_t offset;
 };
+
+struct opf_table{
+    struct opf * open_file_table[OPF_TABLE_SIZE];
+    lock;
+}
+
+extern struct opf_table * global_opf_table;
 
 extern struct opf * open_file_table[OPF_TABLE_SIZE];
 

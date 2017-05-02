@@ -9,6 +9,7 @@
  * Contains some file-related maximum length constants
  */
 #include <limits.h>
+#include <sync.h>
 
 // Self-defined global open file table size
 #define OPF_TABLE_SIZE 128
@@ -22,6 +23,7 @@ struct fd {
 // Data structure for file descriptor table
 struct fd_table {
 	struct fd * fdt[OPEN_MAX];
+	struct lock * lk;
 };
 
 // Data structure for open file table entry
@@ -29,10 +31,20 @@ struct opf{
     struct vnode *vn;
     int refcount;
     off_t offset;
+    struct lock * lk;
 };
 
+// Data structure for global open file table
+struct opf_table {
+	struct opf * open_file_table[OPF_TABLE_SIZE];
+	struct lock * lk;
+}
+
+// use extern to make it globally accessible
+extern struct opf_table * global_opf_table;
+
 // This array is the global open file table
-extern struct opf * open_file_table[OPF_TABLE_SIZE];
+// extern struct opf * open_file_table[OPF_TABLE_SIZE];
 
 // Declarations of system calls
 int sys_open(const char *filename, int flags, mode_t mode, int *retval);
