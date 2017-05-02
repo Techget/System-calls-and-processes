@@ -37,7 +37,7 @@
 #include <syscall.h>
 #include <file.h>
 #include <copyinout.h>
-
+#include <endian.h>
 
 /*
  * System call dispatcher.
@@ -77,13 +77,13 @@
  * stack, starting at sp+16 to skip over the slots for the
  * registerized values, with copyin().
  */
-void
-syscall(struct trapframe *tf)
+void syscall(struct trapframe *tf)
 {
 	int callno;
-	int32_t retval,retval1;
+	int32_t retval;
 	int err;
 	off_t offset;
+	off_t retval64;
 	int whence;
 
 	KASSERT(curthread != NULL);
@@ -135,18 +135,15 @@ syscall(struct trapframe *tf)
 		break;
 
 		case SYS_lseek:
-		offset = ((off_t)tf->tf_a2) << 32 | tf->tf_a3;
+		// read in 64 bit offset parameter 
+		// tf->tf_a1 is skipped, so we need to use copyin to read whence parameter
+		join32to64(tf->tf_a2, tf->tf_a3, (uint64_t *)&offset);
 		err = copyin((const_userptr_t)tf->tf_sp+16, &whence, sizeof(int));
 		if(err) {
 			break;
 		}
-		err = sys_lseek(tf->tf_a0, offset, whence, &retval, &retval1);
-		if(!err) {
-			tf->tf_v1 = retval1;
-		}
+		err = sys_lseek(tf->tf_a0, offset, whence, &retval64);
 		break;
-
-	    /* Add stuff here */
 
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
@@ -165,21 +162,15 @@ syscall(struct trapframe *tf)
 	}
 	else {
 		/* Success. */
+		if(callno == SYS_lseek) {
+			split64to32(retval64, &tf->tf_v0, &tf->tf_v1);
+		}
 		tf->tf_v0 = retval;
 		tf->tf_a3 = 0;      /* signal no error */
 	}
 
-	/*
-	 * Now, advance the program counter, to avoid restarting
-	 * the syscall over and over again.
-	 */
-
+	// Increment the program counter
 	tf->tf_epc += 4;
-
-	/* Make sure the syscall code didn't forget to lower spl */
-	KASSERT(curthread->t_curspl == 0);
-	/* ...or leak any spinlocks */
-	KASSERT(curthread->t_iplhigh_count == 0);
 }
 
 /*
@@ -190,8 +181,7 @@ syscall(struct trapframe *tf)
  *
  * Thus, you can trash it and do things another way if you prefer.
  */
-void
-enter_forked_process(struct trapframe *tf)
+void enter_forked_process(struct trapframe *tf)
 {
 	(void)tf;
 }

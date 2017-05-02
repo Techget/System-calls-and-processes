@@ -19,8 +19,7 @@
 /*
 *	deal with open system call
 */
-int 
-sys_open(const char *filename, int flags, mode_t mode, int *retval){
+int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int result = 0;
 	int index = 3;
 	int i=0;
@@ -102,8 +101,7 @@ sys_open(const char *filename, int flags, mode_t mode, int *retval){
 /*
 *	deal with dup2 system call
 */
-int 
-sys_dup2(int oldfd, int newfd, int *retval){
+int sys_dup2(int oldfd, int newfd, int *retval){
 	int result = 0;
 
 	// bad file descriptor number
@@ -147,8 +145,7 @@ sys_dup2(int oldfd, int newfd, int *retval){
 /*
 *	deal with close system call
 */
-int 
-sys_close(int fd, int *retval){
+int sys_close(int fd, int *retval){
 	//bad file descriptor
 	if(fd >= OPEN_MAX || fd < 0) {
 		return EBADF;
@@ -202,8 +199,7 @@ sys_close(int fd, int *retval){
 /*
 *	deal with read system call
 */
-int 
-sys_read(int fd, void *buf, size_t count, int *retval){
+int sys_read(int fd, void *buf, size_t count, int *retval){
 	int result=0;
 	// verify the validaty of file handler
 	if(fd >= OPEN_MAX || fd < 0) {
@@ -258,8 +254,7 @@ sys_read(int fd, void *buf, size_t count, int *retval){
 /*
 *	deal with write system call
 */
-int 
-sys_write(int fd, const void *buf, size_t count, int *retval){
+int sys_write(int fd, const void *buf, size_t count, int *retval){
 	int result = 0;
 
 	// bad file descriptor
@@ -312,8 +307,7 @@ sys_write(int fd, const void *buf, size_t count, int *retval){
 /*
 *	deal with lseek system call
 */
-off_t 
-sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
+off_t sys_lseek(int fd, off_t offset, int whence, off_t * retval64){
 	int result;
 	// ###### sanity check ########
 	// check fd validity
@@ -371,8 +365,7 @@ sys_lseek(int fd, off_t offset, int whence, int *retval, int *retval1){
 	// update the offset value in open file table entry
 	curproc->p_fdtable->fdt[fd]->open_file->offset = final_pos;
 
-	*retval = (uint32_t)((offset & 0xFFFFFFFF00000000) >> 32);
-	*retval1 = (uint32_t)(offset & 0xFFFFFFFF);	
+	*retval64 = final_pos;
 
 	return 0;
 }
@@ -441,7 +434,6 @@ void opf_table_init(){
 		kfree(opf_stdout);
 		kfree(opf_stderr);
 		vfs_close(vn_stdin);
-		kprintf("something wrong\n");
 	}
 	if(vfs_open(c2, O_WRONLY, 0, &vn_stdout)){
 		kfree(opf_stdin);
@@ -449,7 +441,6 @@ void opf_table_init(){
 		kfree(opf_stderr);
 		vfs_close(vn_stdin);
 		vfs_close(vn_stdout);
-		kprintf("something wrong\n");
 	}
 	if(vfs_open(c3, O_WRONLY, 0, &vn_stderr)){
 		kfree(opf_stdin);
@@ -458,7 +449,6 @@ void opf_table_init(){
 		vfs_close(vn_stdin);
 		vfs_close(vn_stdout);
 		vfs_close(vn_stderr);
-		kprintf("something wrong\n");
 	}
 
 	// initialize offset to 0
