@@ -160,8 +160,9 @@ int sys_close(int fd, int *retval){
 	lock_acquire(curproc->p_fdtable->fdt[fd]->open_file->lk);
 
 	//close vnode
+	// kprintf("vn_refcount: %d\n", curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount);
 	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
-		kprintf("vn_refcount: %d\n", curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount);
+		// kprintf("vn_refcount: %d\n", curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount);
 		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
 		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
 	} else {
@@ -169,6 +170,7 @@ int sys_close(int fd, int *retval){
 	}
 
 	// close open file
+	// kprintf("open_file->refcount: %d\n", curproc->p_fdtable->fdt[fd]->open_file->refcount);
 	if(curproc->p_fdtable->fdt[fd]->open_file->refcount == 1){
 		// curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
 		int i = 0;
@@ -179,12 +181,22 @@ int sys_close(int fd, int *retval){
 		}
 		// release and destroy the lock since this file descriptor is going to be
 		// destroyed
+		// kprintf("lock_destroy!!!!! \n");
 		lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 		lock_destroy(curproc->p_fdtable->fdt[fd]->open_file->lk);
 		kfree(curproc->p_fdtable->fdt[fd]->open_file);	
+		curproc->p_fdtable->fdt[fd]->open_file = NULL;
 		global_opf_table->open_file_table[i] = NULL;
 	} else {
 		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
+	}
+
+	// kprintf("curproc->p_fdtable->fdt[fd]->open_file->lk: %p\n",curproc->p_fdtable->fdt[fd]->open_file->lk);
+	// kprintf("just before test of lock_do_i_hold\n");
+
+	if (curproc->p_fdtable->fdt[fd]->open_file != NULL && lock_do_i_hold(curproc->p_fdtable->fdt[fd]->open_file->lk)) {
+		// kprintf("I hold lock\n");
+		lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 	}
 
 	// close fd, free file descriptor structure
