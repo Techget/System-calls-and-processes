@@ -28,7 +28,7 @@ main(int argc, char * argv[])
 
         printf("*********** test template ***********");
 
- 		// sys161 kernel "p /testbin/a2_test"
+ 		// sys161 kernel "p /testbin/a2_close"
 
 
 		// *************** open *********************

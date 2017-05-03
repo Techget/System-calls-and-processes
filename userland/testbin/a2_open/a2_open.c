@@ -72,41 +72,63 @@ O_APPEND error
 */
 
 
-			fd = open("test.file", O_RDWR | O_CREAT );
-			printf("* open() got fd %d\n", fd);
-			if (fd < 0) {
-				printf("ERROR opening file: %s\n", strerror(errno));
-				exit(1);
-			}
+ 		// sys161 kernel "p /testbin/a2_test"
 
 
-        printf("* writing test string\n");
-        r = write(fd, teststr1, strlen(teststr1));
+		// *************** open *********************
+        printf("* testing open\n");
+		fd = open("test.file", O_RDWR | O_CREAT );
+		printf("* open() got fd %d\n", fd);
+		printf("* end open\n\n");
+		// ************* end open *********************
+		// *************** write *********************
+		str = teststr1;
+        printf("* testing write: %s\n", str);
+        r = write(fd, str, strlen(str));
         printf("* wrote %d bytes\n", r);
         if (r < 0) {
                 printf("ERROR writing file: %s\n", strerror(errno));
                 exit(1);
         }
-
+		printf("* end write\n\n");
+		// ************* end write *********************
+		// *************** close *********************
+        printf("* testing close \n");
 		close(fd);
-
-		fd = open("test.file", O_RDWR|O_TRUNC);
-		printf("* open() with TRUNC got fd %d\n", fd);
-		if (fd < 0) {
-			printf("ERROR opening file: %s\n", strerror(errno));
-			exit(1);
-		}
+		printf("* end close\n\n");
+		// *************** end close *********************
 
 
-        printf("* writing test string\n");
-        r = write(fd, teststr2, strlen(teststr2));
+
+
+
+
+		// *************** open *********************
+        printf("* testing open\n");
+		fd = open("test.file", O_RDWR | O_APPEND );
+		printf("* open() got fd %d\n", fd);
+		printf("* end open\n\n");
+		// ************* end open *********************
+		// *************** write *********************
+		str = teststr2;
+        printf("* testing write: %s\n", str);
+        r = write(fd, str, strlen(str));
         printf("* wrote %d bytes\n", r);
         if (r < 0) {
                 printf("ERROR writing file: %s\n", strerror(errno));
                 exit(1);
         }
-
+		printf("* end write\n\n");
+		// ************* end write *********************
+		// *************** close *********************
+        printf("* testing close \n");
 		close(fd);
+		printf("* end close\n\n");
+		// *************** end close *********************
+
+
+
+
 
 
 

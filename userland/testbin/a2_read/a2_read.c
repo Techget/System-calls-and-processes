@@ -31,6 +31,8 @@ main(int argc, char * argv[])
  		// sys161 kernel "p /testbin/a2_test"
 
 
+
+
 		// *************** open *********************
         printf("* testing open\n");
 		fd = open("test.file", O_RDWR | O_CREAT );

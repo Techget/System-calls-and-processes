@@ -27,44 +27,38 @@ main(int argc, char * argv[])
 
         printf("*********** dup2 test ***********");
 
+
+
+
+		// *************** open *********************
+        printf("* testing open\n");
 		fd = open("test.file", O_RDWR | O_CREAT );
 		printf("* open() got fd %d\n", fd);
-		if (fd < 0) {
-			printf("ERROR opening file: %s\n", strerror(errno));
-			exit(1);
-		}
+		printf("* end open\n\n");
+		// ************* end open *********************
 
 
-        printf("* writing test string\n");
-        r = write(fd, teststr1, strlen(teststr1));
-        printf("* wrote %d bytes\n", r);
+
+
+		// *************** dup2 *********************
+ 		printf("* testing dup2\n");
+        r = dup2(fd, 1);
         if (r < 0) {
-                printf("ERROR writing file: %s\n", strerror(errno));
+                printf("ERROR dup2: %s\n", strerror(errno));
                 exit(1);
         }
+		printf("* end dup2\n\n");
+		// *************** end dup2 *********************
 
+
+
+
+
+		// *************** close *********************
+        printf("* testing close \n");
 		close(fd);
-
-		fd = open("test.file", O_RDWR|O_TRUNC);
-		printf("* open() with TRUNC got fd %d\n", fd);
-		if (fd < 0) {
-			printf("ERROR opening file: %s\n", strerror(errno));
-			exit(1);
-		}
-
-
-        printf("* writing test string\n");
-        r = write(fd, teststr2, strlen(teststr2));
-        printf("* wrote %d bytes\n", r);
-        if (r < 0) {
-                printf("ERROR writing file: %s\n", strerror(errno));
-                exit(1);
-        }
-
-		close(fd);
-
-
-
+		printf("* end close\n\n");
+		// *************** end close *********************
 
         return 0;
 }
