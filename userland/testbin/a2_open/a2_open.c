@@ -8,7 +8,8 @@
 #include <errno.h>
 
 #define MAX_BUF 500
-char teststr[] = "Haha";
+char teststr1[] = "HahaHehe";
+char teststr2[] = "Haha";
 char buf[MAX_BUF];
 
 int
@@ -22,8 +23,8 @@ O_RDWR		    Open for reading and writing.
 
 O_CREAT 	    Create the file if it doesn't exist.
 O_EXCL		    Fail if the file already exists.
-O_TRUNC	 	    Truncate the file to length 0 upon open.
-O_APPEND e 	    Open the file in append mode.
+O_TRUNC	 c	    Truncate the file to length 0 upon open.
+O_APPEND c 	    Open the file in append mode.
 
 
 
@@ -55,9 +56,7 @@ O_APPEND error
         (void) argc;
         (void) argv;
 
-
-
-        printf("**********\n* opening new file \"test.file\"\n");
+        printf("*********** open test ***********");
 
 /*
 		printf("*********** file descriptor maximum test *********\n");
@@ -82,7 +81,7 @@ O_APPEND error
 
 
         printf("* writing test string\n");
-        r = write(fd, teststr, strlen(teststr));
+        r = write(fd, teststr1, strlen(teststr1));
         printf("* wrote %d bytes\n", r);
         if (r < 0) {
                 printf("ERROR writing file: %s\n", strerror(errno));
@@ -91,8 +90,8 @@ O_APPEND error
 
 		close(fd);
 
-		fd = open("test.file", O_RDWR|O_APPEND);
-		printf("* open() with APPEND got fd %d\n", fd);
+		fd = open("test.file", O_RDWR|O_TRUNC);
+		printf("* open() with TRUNC got fd %d\n", fd);
 		if (fd < 0) {
 			printf("ERROR opening file: %s\n", strerror(errno));
 			exit(1);
@@ -100,7 +99,7 @@ O_APPEND error
 
 
         printf("* writing test string\n");
-        r = write(fd, teststr, strlen(teststr));
+        r = write(fd, teststr2, strlen(teststr2));
         printf("* wrote %d bytes\n", r);
         if (r < 0) {
                 printf("ERROR writing file: %s\n", strerror(errno));

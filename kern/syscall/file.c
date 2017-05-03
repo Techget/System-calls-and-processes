@@ -87,7 +87,6 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		offset = 0;
 	}
 
-
 	i=0;
 	while(open_file_table[i]!=NULL && open_file_table[i]->vn != vn){
 		i++;
@@ -109,11 +108,6 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		curproc->p_fdtable->fdt[index]->open_file = open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
 	}
-
-
-
-
-
 
 	// set return value as file descriptor
 	*retval = index;
