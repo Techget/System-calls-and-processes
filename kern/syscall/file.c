@@ -22,11 +22,7 @@
 */
 int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int result = 0;
-<<<<<<< HEAD
-	int index = 3;
-=======
 	int index = 0;
->>>>>>> addlockAndImprove
 	size_t offset = 0;
 	int i=0;
 	size_t len;
@@ -85,14 +81,8 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// create new file descriptor and put it into per process file descriptor table
 	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
 
-<<<<<<< HEAD
-	// O_APPEND flag
-	if(flags & O_APPEND){
-		kprintf("O_APPEND");
-=======
 	// O_APPEND flag should set the offset the end of the file
 	if(flags & O_APPEND){
->>>>>>> addlockAndImprove
 		struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
 		result = VOP_STAT(vn, file_stat);
 		if (result) {
@@ -118,10 +108,7 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		ofile->vn = vn;
 		ofile->refcount = 1;
 		ofile->offset = offset;
-<<<<<<< HEAD
-=======
 		ofile->lk = lock_create("open_file_table_entry");
->>>>>>> addlockAndImprove
 
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
