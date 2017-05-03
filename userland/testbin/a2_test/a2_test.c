@@ -32,7 +32,6 @@ main(int argc, char * argv[])
 
 
 		// *************** open *********************
-
         printf("* testing open\n");
 		fd = open("test.file", O_RDWR | O_CREAT );
 		printf("* open() got fd %d\n", fd);
@@ -59,7 +58,17 @@ main(int argc, char * argv[])
 
 
 
-
+		// *************** write *********************
+		str = teststr2;
+        printf("* testing write: %s\n", str);
+        r = write(fd, str, strlen(str));
+        printf("* wrote %d bytes\n", r);
+        if (r < 0) {
+                printf("ERROR writing file: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end write\n\n");
+		// ************* end write *********************
 
 
 
