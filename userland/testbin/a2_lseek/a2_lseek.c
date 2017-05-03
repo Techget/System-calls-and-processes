@@ -63,7 +63,7 @@ main(int argc, char * argv[])
 
 		// *************** lseek *********************
  		printf("* testing lseek\n");
-        r = lseek(fd, 5, SEEK_SET);
+        r = lseek(fd, 0, SEEK_SET);
         if (r < 0) {
                 printf("ERROR lseek: %s\n", strerror(errno));
                 exit(1);
