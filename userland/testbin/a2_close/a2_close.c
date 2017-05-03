@@ -21,19 +21,31 @@ main(int argc, char * argv[])
 
 */
 
-        int fd, r;
+        int fd1,fd2, r;
 		char *str;
         (void) argc;
         (void) argv;
 
-        printf("*********** lseek test ***********");
+        printf("*********** test template ***********");
+
+ 		// sys161 kernel "p /testbin/a2_test"
+
+
+		// *************** open *********************
+        printf("* testing open\n");
+		fd1 = open("test.file", O_RDWR | O_CREAT );
+		printf("* open() got fd %d\n", fd1);
+		printf("* end open\n\n");
+		// ************* end open *********************
 
 
 
 
 		// *************** open *********************
-		fd = open("test.file", O_RDWR | O_CREAT );
-		printf("* open() got fd %d\n", fd);
+        printf("* testing open\n");
+		fd2 = open("test.file", O_RDWR | O_CREAT );
+		printf("* open() got fd %d\n", fd2);
+		printf("* end open\n\n");
 		// ************* end open *********************
 
 
@@ -41,42 +53,64 @@ main(int argc, char * argv[])
 
 		// *************** write *********************
 		str = teststr1;
-        printf("* writing test string: %s\n", str);
-        r = write(fd, str, strlen(str));
+        printf("* testing write: %s\n", str);
+        r = write(fd1, str, strlen(str));
         printf("* wrote %d bytes\n", r);
         if (r < 0) {
                 printf("ERROR writing file: %s\n", strerror(errno));
                 exit(1);
         }
+		printf("* end write\n\n");
 		// ************* end write *********************
 
 
 
 
+
 		// *************** close *********************
-		close(fd);
+        printf("* testing close \n");
+		close(fd1);
+		printf("* end close\n\n");
 		// *************** end close *********************
 
 
 
 
-		fd = open("test.file", O_RDWR|O_TRUNC);
-		printf("* open() with TRUNC got fd %d\n", fd);
-		if (fd < 0) {
-			printf("ERROR opening file: %s\n", strerror(errno));
-			exit(1);
-		}
 
 
-        printf("* writing test string\n");
-        r = write(fd, teststr2, strlen(teststr2));
-        printf("* wrote %d bytes\n", r);
+
+
+
+		// *************** read *********************
+        printf("* testing read \n");
+        int i = 0;
+        do  {
+                printf("* attemping read of %d bytes\n", MAX_BUF -i);
+                r = read(fd2, &buf[i], MAX_BUF - i);
+                printf("* read %d bytes\n", r);
+                i += r;
+        } while (i < MAX_BUF && r > 0);
+
         if (r < 0) {
-                printf("ERROR writing file: %s\n", strerror(errno));
+                printf("ERROR reading file: %s\n", strerror(errno));
                 exit(1);
         }
+        printf("* read: %s\n", buf);
+		printf("* end read\n\n");
+		// *************** end read *********************
 
-		close(fd);
+
+
+
+
+
+		// *************** close *********************
+        printf("* testing close \n");
+		close(fd2);
+		printf("* end close\n\n");
+		// *************** end close *********************
+
+
 
 
 

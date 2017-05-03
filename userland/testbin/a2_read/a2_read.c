@@ -32,7 +32,6 @@ main(int argc, char * argv[])
 
 
 		// *************** open *********************
-
         printf("* testing open\n");
 		fd = open("test.file", O_RDWR | O_CREAT );
 		printf("* open() got fd %d\n", fd);
@@ -57,6 +56,26 @@ main(int argc, char * argv[])
 		// ************* end write *********************
 
 
+
+
+
+		// *************** close *********************
+        printf("* testing close \n");
+		close(fd);
+		printf("* end close\n\n");
+		// *************** end close *********************
+
+
+
+
+
+		// *************** open *********************
+
+        printf("* testing open\n");
+		fd = open("test.file", O_RDWR | O_CREAT );
+		printf("* open() got fd %d\n", fd);
+		printf("* end open\n\n");
+		// ************* end open *********************
 
 
 
