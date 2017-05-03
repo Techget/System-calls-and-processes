@@ -10,6 +10,7 @@
 #define MAX_BUF 500
 char teststr1[] = "HahaHehe";
 char teststr2[] = "Haha";
+char teststr3[] = "Ta-da";
 char buf[MAX_BUF];
 
 int
@@ -53,6 +54,7 @@ O_APPEND error
 */
 
         int fd, r;
+		char *str;
         (void) argc;
         (void) argv;
 
@@ -129,7 +131,28 @@ O_APPEND error
 
 
 
-
+		// *************** open *********************
+        printf("* testing open\n");
+		fd = open("test.file", O_RDWR);
+		printf("* open() got fd %d\n", fd);
+		printf("* end open\n\n");
+		// ************* end open *********************
+		// *************** write *********************
+		str = teststr3;
+        printf("* testing write: %s\n", str);
+        r = write(fd, str, strlen(str));
+        printf("* wrote %d bytes\n", r);
+        if (r < 0) {
+                printf("ERROR writing file: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end write\n\n");
+		// ************* end write *********************
+		// *************** close *********************
+        printf("* testing close \n");
+		close(fd);
+		printf("* end close\n\n");
+		// *************** end close *********************
 
 
 
