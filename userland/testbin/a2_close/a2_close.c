@@ -68,9 +68,9 @@ main(int argc, char * argv[])
 
 
 		// *************** close *********************
-        printf("* testing close \n");
-		close(fd1);
-		printf("* end close\n\n");
+  //       printf("* testing close \n");
+		// close(fd1);
+		// printf("* end close\n\n");
 		// *************** end close *********************
 
 
@@ -110,7 +110,9 @@ main(int argc, char * argv[])
 		printf("* end close\n\n");
 		// *************** end close *********************
 
-
+        printf("* testing close \n");
+                close(fd1);
+                printf("* end close\n\n");
 
 
 
