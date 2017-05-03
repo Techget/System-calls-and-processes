@@ -1,6 +1,6 @@
 Following is the design, and files/functions/structures related or may be affected.
 
-/*********************Work flow and some considerations ****************/
+/********************* Work flow and some considerations ****************/
 
 Sys_call
 (user) make syscall in instruction, eg. open(fname, flag, mode)
@@ -19,7 +19,7 @@ Open/Close make use of vfs_open, vfs_open, which are vfs operations, for operati
 
 Syscall is executed in kernel mode, where interrupt is disabled, so 
 
-With every open() system call, user gets its own private reference number known as file descriptor. 2. Separate entries are created in user file descriptor and global file table, but only the reference count is increased in the vnode table. 3. all the system calls related to file handling use these tables for data manipulation.
+1. With every open() system call, user gets its own private reference number known as file descriptor. 2. Separate entries are created in user file descriptor and global file table, but only the reference count is increased in the vnode table. 3. all the system calls related to file handling use these tables for data manipulation.
 
 Global File table. It contains information that is global to the kernel e.g. the byte offset in the file where the user's next read/write will start and the access rights allowed to the opening process. 
 
@@ -29,13 +29,24 @@ We need global open file table for dup2() and fork()
 
 dup() system call doesn’t create a separate entry in the global file table like the open() system call, instead it just increments the count field of the entry pointed to by the given input file descriptor in the global file table.
 
-/********************** syscall.c ***************************/
+/******************** concurrency issues***********************/
+
+Share resource: per process file descriptor table, global open file table, global open file table entry(opf)
+Nonshare resource: file descriptor.
+
+Add lock into definition of per-process file descriptor table, global open file table, and global open file table entry.
+The locks of per-process file descriptor table and global open file table, are mainly used when sys_open/sys_close/sys_dup2 are invoked, and the lock of open file table entry is mainly used when sys_read/sys_write/sys_lseek are invoked.
+
+/********************** operations in syscall.c ***************************/
 
 In switch:
     Add 6 new cases for sys_open, sys_close, sys_read, sys_write, sys_dup2, sys_lseek
     Call functions in file.c
 
-/*********************** proc.h *****************************/
+Reads input from trapframe, trapframe is set up during the context switch
+And after the execution, should return corresponding value, set the trapframe properly.
+
+/************** put per-process fd table into struct proc in proc.h ************/
 
 Add following structures:
 
@@ -51,30 +62,44 @@ struct proc{
     struct fd_table * fdesc_table;    
 }
 
-/************************** file.h *****************************/
+/****************** structures definition in file.h **********************/
 
 Add following structures:
 
+#define OPF_TABLE_SIZE 128
+
+// Data structure for file descriptor
 struct fd {
-    struct opf * open_file;
+    struct opf * open_file; 
     int flags;
 };
 
+// Data structure for file descriptor table
 struct fd_table {
     struct fd * fdt[OPEN_MAX];
+    struct lock * lk;
 };
 
+// Data structure for open file table entry
 struct opf{
     struct vnode *vn;
     int refcount;
     off_t offset;
+    struct lock * lk;
 };
 
-extern struct opf * open_file_table[OPF_TABLE_SIZE];
+// Data structure for global open file table
+struct opf_table {
+    struct opf * open_file_table[OPF_TABLE_SIZE];
+    struct lock * lk;
+};
+
+// use extern to make it globally accessible
+extern struct opf_table * global_opf_table;
 
 
 
-/***********************syscall function design ****************************/
+/*********************** syscall function design ****************************/
 In file.c
 /*################### sys_open ########################*/
 sys_open:
