@@ -180,12 +180,19 @@ int sys_close(int fd, int *retval){
 		// destroyed
 		lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 		lock_destroy(curproc->p_fdtable->fdt[fd]->open_file->lk);
-		kfree(curproc->p_fdtable->fdt[fd]->open_file);	
+		kfree(curproc->p_fdtable->fdt[fd]->open_file);
+		curproc->p_fdtable->fdt[fd]->open_file = NULL;
 		global_opf_table->open_file_table[i] = NULL;
 	} else {
 		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
 	}
 
+	// If hold the lock for open file entry, should release it
+	if (curproc->p_fdtable->fdt[fd]->open_file != NULL 
+		&& lock_do_i_hold(curproc->p_fdtable->fdt[fd]->open_file->lk)) {
+		lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
+	}
+	
 	// close fd, free file descriptor structure
 	kfree(curproc->p_fdtable->fdt[fd]);
 	curproc->p_fdtable->fdt[fd] = NULL;
