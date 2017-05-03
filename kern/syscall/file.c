@@ -161,6 +161,7 @@ int sys_close(int fd, int *retval){
 
 	//close vnode
 	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
+		kprintf("vn_refcount: %d\n", curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount);
 		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
 		curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
 	} else {
