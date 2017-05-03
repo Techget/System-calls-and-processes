@@ -15,13 +15,14 @@
 #include <syscall.h>
 #include <copyinout.h>
 #include <proc.h>
+#include <synch.h>
 
 /*
 *	deal with open system call
 */
 int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	int result = 0;
-	int index = 3;
+	int index = 0;
 	size_t offset = 0;
 	int i=0;
 	size_t len;
@@ -42,6 +43,10 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		kfree(kbuf);
 		return result;
 	}
+
+	// get the lock of per process fd table
+	lock_acquire(curproc->p_fdtable->lk);
+
 	// check file descriptor table
 	while(curproc->p_fdtable->fdt[index]!=NULL){
 		index++;
@@ -49,10 +54,11 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// Too many files opened
 	if(index>=OPEN_MAX){
 		kfree(kbuf);
+		lock_release(curproc->p_fdtable->lk);
 		return ENFILE;
 	}
 
-	// check open file table
+	// check open file table, get the lock first
 	lock_acquire(global_opf_table->lk);
 	while(global_opf_table->open_file_table[i]!=NULL){
 		i++;
@@ -60,6 +66,7 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	// Too many files in open file table 
 	if(i>=OPF_TABLE_SIZE){
 		lock_release(global_opf_table->lk);
+		lock_release(curproc->p_fdtable->lk);
 		return ENFILE;
 	}
 
@@ -68,12 +75,13 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 	if(result){
 		kfree(kbuf);
 		lock_release(global_opf_table->lk);
+		lock_release(curproc->p_fdtable->lk);
 		return result;
 	}
-	// create new file descriptor
+	// create new file descriptor and put it into per process file descriptor table
 	curproc->p_fdtable->fdt[index] = (struct fd *)kmalloc(sizeof(struct fd));
 
-	// O_APPEND flag
+	// O_APPEND flag should set the offset the end of the file
 	if(flags & O_APPEND){
 		struct stat * file_stat = (struct stat *)kmalloc(sizeof(struct stat));
 		result = VOP_STAT(vn, file_stat);
@@ -89,78 +97,37 @@ int sys_open(const char *filename, int flags, mode_t mode, int *retval){
 		offset = 0;
 	}
 
-
 	i=0;
 	while(global_opf_table->open_file_table[i]!=NULL && global_opf_table->open_file_table[i]->vn != vn){
 		i++;
 	}
 
-	// create new open file table
+	// create new open file table entry
 	if(global_opf_table->open_file_table[i]==NULL){
 		ofile = (struct opf *)kmalloc(sizeof(struct opf));
 		ofile->vn = vn;
 		ofile->refcount = 1;
 		ofile->offset = offset;
+		ofile->lk = lock_create("open_file_table_entry");
 
 		curproc->p_fdtable->fdt[index]->open_file = ofile;
 		curproc->p_fdtable->fdt[index]->flags = flags;
 		global_opf_table->open_file_table[i] = ofile;
 	} else if(global_opf_table->open_file_table[i]->vn == vn){
 		// link with existing open file table
+		lock_acquire(global_opf_table->open_file_table[i]->lk);
 		global_opf_table->open_file_table[i]->refcount++;
 		curproc->p_fdtable->fdt[index]->open_file = global_opf_table->open_file_table[i];
 		curproc->p_fdtable->fdt[index]->flags = flags;
+		lock_release(global_opf_table->open_file_table[i]->lk);
 	}
 	// after add to global open file table release the lock
 	lock_release(global_opf_table->lk);
+	lock_release(curproc->p_fdtable->lk);
 
 	// set return value as file descriptor
 	*retval = index;
 	kfree(kbuf);
-
-	return 0;
-}
-
-/*
-*	deal with dup2 system call
-*/
-int sys_dup2(int oldfd, int newfd, int *retval){
-	int result = 0;
-
-	// bad file descriptor number
-	if (oldfd >= OPEN_MAX || oldfd < 0 || newfd >= OPEN_MAX || newfd < 0) {
-		return EBADF;
-	}
-
-	// Same file descriptor number
-	if (oldfd == newfd) {
-		*retval = newfd;
-		return 0;
-	}
-
-	// check oldfd
-	if (curproc->p_fdtable->fdt[oldfd] == NULL) {
-		return EBADF;
-	}
-	// check newfd
-	if (curproc->p_fdtable->fdt[newfd] != NULL) {
-		result = sys_close(newfd, retval);
-		if(result) {
-			return EBADF;
-		}
-	}
-	// create a new file descriptor instance and assign it to newfd
-	curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
-
-	// copy the old fd to new fd
-	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file;
-	curproc->p_fdtable->fdt[newfd]->flags = curproc->p_fdtable->fdt[oldfd]->flags;
-
-	// increment the refcount in open file table corresponding entry & vnode
-	curproc->p_fdtable->fdt[newfd]->open_file->refcount++;
-	curproc->p_fdtable->fdt[newfd]->open_file->vn->vn_refcount++;
-
-	*retval = newfd;
 
 	return 0;
 }
@@ -187,6 +154,11 @@ int sys_close(int fd, int *retval){
 		return EBADF;
 	}
 
+	// get the lock for both table and the corresponding opf_table_entry
+	lock_acquire(curproc->p_fdtable->lk);
+	lock_acquire(global_opf_table->lk);
+	lock_acquire(curproc->p_fdtable->fdt[fd]->open_file->lk);
+
 	//close vnode
 	if(curproc->p_fdtable->fdt[fd]->open_file->vn->vn_refcount == 1) {
 		vfs_close(curproc->p_fdtable->fdt[fd]->open_file->vn);
@@ -200,21 +172,76 @@ int sys_close(int fd, int *retval){
 		// curproc->p_fdtable->fdt[fd]->open_file->vn = NULL;
 		int i = 0;
 		for(i=0; i<OPF_TABLE_SIZE; i++){
-			if(curproc->p_fdtable->fdt[fd]->open_file == open_file_table[i]){
+			if(curproc->p_fdtable->fdt[fd]->open_file == global_opf_table->open_file_table[i]){
 				break;
 			}
 		}
+		// release and destroy the lock since this file descriptor is going to be
+		// destroyed
+		lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
+		lock_destroy(curproc->p_fdtable->fdt[fd]->open_file->lk);
 		kfree(curproc->p_fdtable->fdt[fd]->open_file);	
-		open_file_table[i] = NULL;
+		global_opf_table->open_file_table[i] = NULL;
 	} else {
 		curproc->p_fdtable->fdt[fd]->open_file->refcount -= 1;
 	}
 
-	// free file descriptor structure
+	// close fd, free file descriptor structure
 	kfree(curproc->p_fdtable->fdt[fd]);
 	curproc->p_fdtable->fdt[fd] = NULL;
 
+	lock_release(global_opf_table->lk);
+	lock_release(curproc->p_fdtable->lk);
+
 	*retval = 0;
+
+	return 0;
+}
+
+/*
+*	deal with dup2 system call
+*/
+int sys_dup2(int oldfd, int newfd, int *retval){
+	int result = 0;
+
+	// bad file descriptor number
+	if (oldfd >= OPEN_MAX || oldfd < 0 || newfd >= OPEN_MAX || newfd < 0) {
+		return EBADF;
+	}
+
+	// Same file descriptor number
+	if (oldfd == newfd) {
+		*retval = newfd;
+		return EINVAL;
+	}
+
+	// check oldfd
+	if (curproc->p_fdtable->fdt[oldfd] == NULL) {
+		return EBADF;
+	}
+	// check newfd
+	if (curproc->p_fdtable->fdt[newfd] != NULL) {
+		result = sys_close(newfd, retval);
+		if(result) {
+			return EBADF;
+		}
+	}
+	// we need to 
+	lock_acquire(curproc->p_fdtable->lk);
+
+	// create a new file descriptor instance and assign it to newfd
+	curproc->p_fdtable->fdt[newfd] = (struct fd*)kmalloc(sizeof(struct fd));
+
+	// copy the old fd to new fd
+	curproc->p_fdtable->fdt[newfd]->open_file = curproc->p_fdtable->fdt[oldfd]->open_file;
+	curproc->p_fdtable->fdt[newfd]->flags = curproc->p_fdtable->fdt[oldfd]->flags;
+
+	// increment the refcount in open file table corresponding entry & vnode
+	curproc->p_fdtable->fdt[newfd]->open_file->refcount++;
+
+	lock_release(curproc->p_fdtable->lk);
+
+	*retval = newfd;
 
 	return 0;
 }
@@ -257,6 +284,8 @@ int sys_read(int fd, void *buf, size_t count, int *retval){
 	uio_temp->uio_rw = UIO_READ;
 	uio_temp->uio_space = curproc->p_addrspace;
 
+	lock_acquire(curproc->p_fdtable->fdt[fd]->open_file->lk);
+
 	result = VOP_READ(curproc->p_fdtable->fdt[fd]->open_file->vn, uio_temp);
 
 	if (result) {
@@ -265,6 +294,8 @@ int sys_read(int fd, void *buf, size_t count, int *retval){
 		return result;
 	}
 	curproc->p_fdtable->fdt[fd]->open_file->offset = uio_temp->uio_offset;
+
+	lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 
 	*retval = count - uio_temp->uio_resid;
 
@@ -312,6 +343,8 @@ int sys_write(int fd, const void *buf, size_t count, int *retval){
 
 	uio_kinit(&iov, &ku, kbuf, count ,
 		curproc->p_fdtable->fdt[fd]->open_file->offset, UIO_WRITE);
+
+	lock_acquire(curproc->p_fdtable->fdt[fd]->open_file->lk);
 	// make use of vnode operation
 	result = VOP_WRITE(curproc->p_fdtable->fdt[fd]->open_file->vn, &ku);
 	if (result) {
@@ -320,6 +353,8 @@ int sys_write(int fd, const void *buf, size_t count, int *retval){
 	}
 	// update the offset
 	curproc->p_fdtable->fdt[fd]->open_file->offset = ku.uio_offset;
+
+	lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 
 	*retval = count - ku.uio_resid;
 	kfree(kbuf);
@@ -332,7 +367,7 @@ int sys_write(int fd, const void *buf, size_t count, int *retval){
 */
 off_t sys_lseek(int fd, off_t offset, int whence, off_t * retval64){
 	int result;
-	// ###### sanity check ########
+	// sanity check
 	// check fd validity
 	if (fd >= OPEN_MAX || fd < 0){
 		return EBADF;
@@ -375,7 +410,7 @@ off_t sys_lseek(int fd, off_t offset, int whence, off_t * retval64){
 		}
 		final_pos = temp_offset;
 	} else if (whence == SEEK_END) {
-		off_t temp_offset = file_size - offset;
+		off_t temp_offset = file_size + offset;
 		if (temp_offset <= 0) {
 			kfree(file_stat);
 			return EINVAL;
@@ -385,8 +420,10 @@ off_t sys_lseek(int fd, off_t offset, int whence, off_t * retval64){
 		return EINVAL;
 	}
 
+	lock_acquire(curproc->p_fdtable->fdt[fd]->open_file->lk);
 	// update the offset value in open file table entry
 	curproc->p_fdtable->fdt[fd]->open_file->offset = final_pos;
+	lock_release(curproc->p_fdtable->fdt[fd]->open_file->lk);
 
 	*retval64 = final_pos;
 
@@ -411,23 +448,24 @@ void fd_table_init(void){
 
 	// stdin
 	curproc->p_fdtable->fdt[0] = (struct fd *)kmalloc(sizeof(struct fd));
-	curproc->p_fdtable->fdt[0]->open_file = open_file_table[0];
+	curproc->p_fdtable->fdt[0]->open_file = global_opf_table->open_file_table[0];
 	curproc->p_fdtable->fdt[0]->flags = O_RDONLY;
 	// stdout
 	curproc->p_fdtable->fdt[1] = (struct fd *)kmalloc(sizeof(struct fd));
-	curproc->p_fdtable->fdt[1]->open_file = open_file_table[1];
+	curproc->p_fdtable->fdt[1]->open_file = global_opf_table->open_file_table[1];
 	curproc->p_fdtable->fdt[1]->flags = O_WRONLY;
 	// stderr
 	curproc->p_fdtable->fdt[2] = (struct fd *)kmalloc(sizeof(struct fd));
-	curproc->p_fdtable->fdt[2]->open_file = open_file_table[2];
+	curproc->p_fdtable->fdt[2]->open_file = global_opf_table->open_file_table[2];
 	curproc->p_fdtable->fdt[2]->flags = O_WRONLY;
 }
 
 /*
-*	init function for global open file table
+*	Init function for global open file table, allocate memory to global open file table
+*	, initialize the stdin/out/err, and set other slots to NULL.
 */
 void opf_table_init(){
-	global_opf_table = kmalloc((struct opf_table *)sizeof(struct opf_table));
+	global_opf_table = (struct opf_table *)kmalloc(sizeof(struct opf_table));
 	// create global open file table lock
 	global_opf_table->lk = lock_create("global_open_file_table");
 
@@ -458,6 +496,7 @@ void opf_table_init(){
 	struct vnode * vn_stdout;
 	struct vnode * vn_stderr;
 
+	// device name
 	char c1[] = "con:";
 	char c2[] = "con:";
 	char c3[] = "con:";

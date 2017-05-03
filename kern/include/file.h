@@ -9,7 +9,7 @@
  * Contains some file-related maximum length constants
  */
 #include <limits.h>
-#include <sync.h>
+#include <synch.h>
 
 // Self-defined global open file table size
 #define OPF_TABLE_SIZE 128
@@ -38,7 +38,7 @@ struct opf{
 struct opf_table {
 	struct opf * open_file_table[OPF_TABLE_SIZE];
 	struct lock * lk;
-}
+};
 
 // use extern to make it globally accessible
 extern struct opf_table * global_opf_table;
