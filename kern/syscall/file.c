@@ -233,7 +233,7 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 			return EBADF;
 		}
 	}
-	// we need to 
+	// we need to corresponding openfile entry lock
 	lock_acquire(curproc->p_fdtable->lk);
 
 	// create a new file descriptor instance and assign it to newfd
@@ -245,6 +245,8 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 
 	// increment the refcount in open file table corresponding entry & vnode
 	curproc->p_fdtable->fdt[newfd]->open_file->refcount++;
+	// add the vn_refcount manually.
+	curproc->p_fdtable->fdt[newfd]->open_file->vn->vn_refcount++;
 
 	lock_release(curproc->p_fdtable->lk);
 
