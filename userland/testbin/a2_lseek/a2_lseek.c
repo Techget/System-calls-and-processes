@@ -21,7 +21,7 @@ main(int argc, char * argv[])
 
 */
 
-        int fd, r;
+        int fd, r, i;
 		char *str;
         (void) argc;
         (void) argv;
@@ -32,7 +32,6 @@ main(int argc, char * argv[])
 
 
 		// *************** open *********************
-
         printf("* testing open\n");
 		fd = open("test.file", O_RDWR | O_CREAT );
 		printf("* open() got fd %d\n", fd);
@@ -62,7 +61,7 @@ main(int argc, char * argv[])
 
 
 		// *************** lseek *********************
- 		printf("* testing lseek\n");
+ 		printf("* testing lseek: SEEK_SET 0\n");
         r = lseek(fd, 0, SEEK_SET);
         if (r < 0) {
                 printf("ERROR lseek: %s\n", strerror(errno));
@@ -70,14 +69,9 @@ main(int argc, char * argv[])
         }
 		printf("* end lseek\n\n");
 		// *************** end lseek *********************
-
-
-
-
-
 		// *************** read *********************
         printf("* testing read \n");
-        int i = 0;
+        i = 0;
         do  {
                 printf("* attemping read of %d bytes\n", MAX_BUF -i);
                 r = read(fd, &buf[i], MAX_BUF - i);
@@ -91,6 +85,138 @@ main(int argc, char * argv[])
         }
         printf("* read: %s\n", buf);
 		printf("* end read\n\n");
+		for(i=0;i<MAX_BUF;i++)
+			buf[i] = 0;
+
+		// *************** end read *********************
+
+
+
+
+
+
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_SET 0\n");
+        r = lseek(fd, 0, SEEK_SET);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_CUR: 2\n");
+        r = lseek(fd, 2, SEEK_CUR);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** read *********************
+        printf("* testing read \n");
+        i = 0;
+        do  {
+                printf("* attemping read of %d bytes\n", MAX_BUF -i);
+                r = read(fd, &buf[i], MAX_BUF - i);
+                printf("* read %d bytes\n", r);
+                i += r;
+        } while (i < MAX_BUF && r > 0);
+
+        if (r < 0) {
+                printf("ERROR reading file: %s\n", strerror(errno));
+                exit(1);
+        }
+        printf("* read: %s\n", buf);
+		printf("* end read\n\n");
+		for(i=0;i<MAX_BUF;i++)
+			buf[i] = 0;
+		// *************** end read *********************
+
+
+
+
+
+
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_SET 0\n");
+        r = lseek(fd, 0, SEEK_SET);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_CUR: 2\n");
+        r = lseek(fd, 2, SEEK_CUR);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_CUR: 2\n");
+        r = lseek(fd, 2, SEEK_CUR);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** read *********************
+        printf("* testing read \n");
+        i = 0;
+        do  {
+                printf("* attemping read of %d bytes\n", MAX_BUF -i);
+                r = read(fd, &buf[i], MAX_BUF - i);
+                printf("* read %d bytes\n", r);
+                i += r;
+        } while (i < MAX_BUF && r > 0);
+
+        if (r < 0) {
+                printf("ERROR reading file: %s\n", strerror(errno));
+                exit(1);
+        }
+        printf("* read: %s\n", buf);
+		printf("* end read\n\n");
+		for(i=0;i<MAX_BUF;i++)
+			buf[i] = 0;
+		// *************** end read *********************
+
+
+
+
+
+
+		// *************** lseek *********************
+ 		printf("* testing lseek: SEEK_END\n");
+        r = lseek(fd, 0, SEEK_END);
+        if (r < 0) {
+                printf("ERROR lseek: %s\n", strerror(errno));
+                exit(1);
+        }
+		printf("* end lseek\n\n");
+		// *************** end lseek *********************
+		// *************** read *********************
+        printf("* testing read \n");
+        i = 0;
+        do  {
+                printf("* attemping read of %d bytes\n", MAX_BUF -i);
+                r = read(fd, &buf[i], MAX_BUF - i);
+                printf("* read %d bytes\n", r);
+                i += r;
+        } while (i < MAX_BUF && r > 0);
+
+        if (r < 0) {
+                printf("ERROR reading file: %s\n", strerror(errno));
+                exit(1);
+        }
+        printf("* read: %s\n", buf);
+		printf("* end read\n\n");
+		for(i=0;i<MAX_BUF;i++)
+			buf[i] = 0;
 		// *************** end read *********************
 
 

@@ -28,7 +28,7 @@ main(int argc, char * argv[])
 
         printf("*********** test template ***********");
 
- 		// sys161 kernel "p /testbin/a2_test"
+ 		// sys161 kernel "p /testbin/a2_close"
 
 
 		// *************** open *********************
@@ -68,9 +68,9 @@ main(int argc, char * argv[])
 
 
 		// *************** close *********************
-  //       printf("* testing close \n");
-		// close(fd1);
-		// printf("* end close\n\n");
+         printf("* testing close \n");
+		 close(fd1);
+		 printf("* end close\n\n");
 		// *************** end close *********************
 
 
@@ -109,11 +109,6 @@ main(int argc, char * argv[])
 		close(fd2);
 		printf("* end close\n\n");
 		// *************** end close *********************
-
-        printf("* testing close \n");
-                close(fd1);
-                printf("* end close\n\n");
-
 
 
 

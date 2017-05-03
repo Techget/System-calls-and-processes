@@ -21,7 +21,7 @@ main(int argc, char * argv[])
 
 */
 
-        int fd, r;
+        int fd, r, i;
 		char *str;
         (void) argc;
         (void) argv;
@@ -75,7 +75,7 @@ main(int argc, char * argv[])
 
 		// *************** read *********************
         printf("* testing read \n");
-        int i = 0;
+        i = 0;
         do  {
                 printf("* attemping read of %d bytes\n", MAX_BUF -i);
                 r = read(fd, &buf[i], MAX_BUF - i);

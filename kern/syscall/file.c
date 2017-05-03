@@ -249,7 +249,10 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 
 	// increment the refcount in open file table corresponding entry & vnode
 	curproc->p_fdtable->fdt[newfd]->open_file->refcount++;
+<<<<<<< HEAD
 	// add the vn_refcount manually.
+=======
+>>>>>>> cde08ea92e55f1a6d22163ddcac57b706c8a0b13
 	curproc->p_fdtable->fdt[newfd]->open_file->vn->vn_refcount++;
 
 	lock_release(curproc->p_fdtable->lk);
