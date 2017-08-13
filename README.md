@@ -1,122 +1,175 @@
 # System calls and processes assignments designs
 
-The (potential) OS/161 assignments
-----------------------------------
+Following is the design for this project, and files/functions/structures related or may be affected. 
 
-OS/161 is used by a wide variety of courses at a wide variety of
-schools, no two of which have the exact same set of assignments and
-assignment requirements. The code base has been (to the extent
-reasonably possible) structured to allow this and not assume any
-particular structure or (particularly) numbering of assignments.
+(details specification refers to: http://cgi.cse.unsw.edu.au/~cs3231/17s1/assignments/asst2/)
 
-That said, in various places comments and documentation must (to be
-helpful, at least) refer to particular assignments and things that are
-(typically) done in particular assignments. These are written in
-fairly general terms. This file is provided as an index for those
-terms.
+/*********************Work flow and some considerations ****************/
 
-***  Always refer to the course materials provided by your     ***
-***  instructors when trying to figure out what functionality  ***
-***  you are and are not required to implement.                ***
+Sys_call
+(user) make syscall in instruction, eg. open(fname, flag, mode)
+(user) set register, trapframe push in stack, and call syscall(tf) in trap.c
+Context switch 
+(kernel) mips_trap, call syscall function defined in syscall.c
+(kernel) make syscall for file operation according to the `callno` passed in, return value store in trap_frame register
+(user) return to user program
 
-Note that the OS/161 code base you are given may include solutions for
-some parts of the assignments described below, or even some whole
-assignments.
+File descriptor table & open file table initialization
+    Initialize file descriptor tables in `runprogram()`.
+    Initialize file descriptor 0,1,2
+    Open file table initialize in `kmain()`
 
-Also note that the text below refers to assorted technical terms and
-OS concepts without much or any explanation; you may not be familiar
-with most of them at first and that's perfectly ok.
+Open/Close make use of vfs_open, vfs_open, which are vfs operations, for operation like read/write etc. make use of vop of vnode, vop_read/vop_write.
 
+Syscall is executed in kernel mode, where interrupt is disabled, so 
 
-OS/161 is intended to support six basic assignments, most of which can
-be divided into smaller pieces. These six assignments are:
+With every open() system call, user gets its own private reference number known as file descriptor. 2. Separate entries are created in user file descriptor and global file table, but only the reference count is increased in the vnode table. 3. all the system calls related to file handling use these tables for data manipulation.
 
-   - synchronization;
-   - basic system calls;
-   - virtual memory;
-   - basic file system functionality;
-   - file system recovery via journaling;
-   - some additional piece of OS functionality.
+Global File table. It contains information that is global to the kernel e.g. the byte offset in the file where the user's next read/write will start and the access rights allowed to the opening process. 
 
+Process File Descriptor table. It is local to every process and contains information like the identifiers of the files opened by the process. Whenever, a process creates a file, it gets an index from this table primarily known as File Descriptor.
 
-Synchronization.
+We need global open file table for dup2() and fork()
 
-This assignment has (potentially) three parts:
-   - Implement (sleep) locks and condition variables.
-   - Implement reader-writer locks.
-   - Solve some synchronization problems of the dining-philosophers
-     variety.
+dup() system call doesn’t create a separate entry in the global file table like the open() system call, instead it just increments the count field of the entry pointed to by the given input file descriptor in the global file table.
 
+/********************** syscall.c ***************************/
 
-Basic system calls. (And processes.)
+In switch:
+    Add 6 new cases for sys_open, sys_close, sys_read, sys_write, sys_dup2, sys_lseek
+    Call functions in file.c
 
-This assignment has (potentially) up to six parts:
-   - Implement file tables and open-file objects.
-   - Implement the basic system calls for files, normally:
-	- open()
-	- dup2()
-	- read()
-	- write()
-	- lseek()
-	- close()
-	- chdir()
-	- __getcwd()
-   - Implement processes, process IDs, and the basic process system
-     calls, normally:
-	- getpid()
-	- fork()
-	- _exit()
-	- waitpid()
-   - Implement the execv() system call.
-   - Implement a scheduler.
+/*********************** proc.h *****************************/
 
+Add following structures:
 
-Virtual memory.
+struct proc{
+    char *p_name;            /* Name of this process */
+    struct spinlock p_lock;        /* Lock for this structure */
+    unsigned p_numthreads;        /* Number of threads in this process */
+    /* VM */
+    struct addrspace *p_addrspace;    /* virtual address space */
+    /* VFS */
+    struct vnode *p_cwd;        /* current working directory */
+   /* File descriptor table */
+    struct fd_table * fdesc_table;    
+}
 
-This assignment entails replacing a provided very simple virtual
-memory system with a real one. This possibly includes providing the
-sbrk() system call. It does not split into parts readily.
+/************************** file.h *****************************/
 
+Add following structures:
 
-Basic file system functionality.
+struct fd {
+    struct opf * open_file;
+    int flags;
+};
 
-This assignment has (potentially) up to five parts:
-   - Add more system calls for file system operations, typically taken
-     from these:
-	- sync()
-	- mkdir()
-	- rmdir()
-	- remove()
-	- link()
-	- rename()
-	- getdirentry()
-	- fstat()
-	- fsync()
-	- ftruncate()
-	- flock()
-     although others may be chosen.
-   - Implement a buffer cache.
-   - Replace a biglock with fine-grained locking in the VFS layer
-     and/or the SFS file system.
-   - Add support for subdirectories to SFS.
-   - Implement cross-directory rename in SFS.
-   - Implement larger files in SFS.
+struct fd_table {
+    struct fd * fdt[OPEN_MAX];
+};
+
+struct opf{
+    struct vnode *vn;
+    int refcount;
+    off_t offset;
+};
+
+extern struct opf * open_file_table[OPF_TABLE_SIZE];
 
 
-File system recovery via journaling.
 
-This assignment has (potentially) five parts:
-   - Implement an on-disk container for a file system journal.
-   - Instrument the buffer cache to support write-ahead journaling.
-   - Design a system of journal records suitable for recovering the
-     file system after a crash.
-   - Add code to SFS to issue these journal records.
-   - Implement code to read the on-disk journal and recover from a
-     crash.
+/***********************syscall function design ****************************/
+In file.c
+/*################### sys_open ########################*/
+sys_open:
+1. file descriptor table:
+    fd start at 3
+    check if fd taken, then increase fd
+    check MAX
 
+2. vfs_open:
+    filepath from userlevel to kernel level
+    kmalloc buffer
+    vfs_open(buffer, flags, mode)
+    error handle
+    free buffer in every cases
 
-Additional projects.
+3. Safety check:
+    input boundary check
+    memory free
 
-There is a wide variety of things that can be done to build on the
-above assignments. None are listed here, because this file is not
-the place for it.
+4. Each open() returns a file descriptor to the process, and the corresponding entry in the user file descriptor table points to a unique entry in the global file table even though a file(/var/file1) is opened more than once.
+
+/*################### sys_read ########################*/
+sys_read:
+1. input check:
+    fd boundary check
+    fd emptiness check
+
+2. VOP_READ:
+    init struct iovec, ->ubase = buf
+    init struct uio, ->uio_iov = &iov
+    VOP_READ()
+    error handle
+    offset reset
+
+3. safety check:
+    input boundary check
+    memory free
+
+/*################### sys_write ########################*/
+sys_write:
+1. input check:
+    fd boundary check
+    fd emptiness check
+
+2. VOP_WRITE:
+    init struct iovec, ->ubase = buf
+    init struct uio, ->uio_iov = &iov
+    VOP_WRITE()
+    error handle
+    offset reset
+
+3. Safety check:
+    fdtable lock
+    input boundary check
+    memory free
+
+/*################### sys_close ########################*/
+sys_close:
+1. input check:
+    fd boundary check
+    fd emptiness check
+
+2. VOP_CLOSE:
+    free fdtable
+    fdtable refcount
+
+/*################### sys_dup2 ########################*/
+sys_dup2:
+1. input check:
+    fd boundary check
+    fd emptiness check
+    fdold != fdnew check
+    
+2. file descriptor copy
+    all old fd parameters copy to new fd
+
+3. Safety check:
+    input boundary check
+    memory free
+
+/*################### sys_lseek ########################*/
+sys_lseek:
+1. input check:
+    fd boundary check
+    fd emptiness check
+
+2. Whence options:
+    switch:{SEEK_SET, SEEK_CUR, SEEK_END}
+    VOP_TRYSEEK
+    error handle
+
+3. Safety check:
+    input boundary check
+memory free
